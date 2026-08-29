@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CameraType {
+  alpr
+  facial
+  cctv
+  speed
+  other
+}
+
+enum CaptureType {
+  plates
+  faces
+  both
+  general
+  unclear
+}
+
+enum CameraStatus {
+  active
+  removed
+  unconfirmed
+}
+
+enum ModerationState {
+  pending
+  verified
+  disputed
+  removed
+}
+
+enum HistoryEventType {
+  sighted
+  active
+  removed
+  unconfirmed
+  relocated
+}
+
+model Camera {
+  id              String          @id @default(cuid())
+  lat             Float
+  lng             Float
+  type            CameraType
+  operator        String
+  captures        CaptureType
+  status          CameraStatus    @default(unconfirmed)
+  notes           String          @default("")
+  reporterId      String // anonymized token only, never PII (IP, email, account)
+  moderationState ModerationState @default(pending)
+  createdAt       DateTime        @default(now())
+  history         HistoryEvent[]
+
+  @@index([status])
+  @@index([moderationState])
+  @@index([type])
+}
+
+model HistoryEvent {
+  id        String           @id @default(cuid())
+  camera    Camera           @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  cameraId  String
+  date      DateTime
+  eventType HistoryEventType
+  note      String           @default("")
+
+  @@index([cameraId])
+}
