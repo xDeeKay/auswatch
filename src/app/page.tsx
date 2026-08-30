@@ -2,6 +2,8 @@ import Link from "next/link";
 import Map from "@/components/Map";
 import { getCameras } from "@/lib/cameras";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const cameras = await getCameras();
 
