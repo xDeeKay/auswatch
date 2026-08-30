@@ -1,0 +1,77 @@
+.leaflet-container {
+  background: #12181d;
+  font-family: var(--font-body), sans-serif;
+}
+
+.auswatch-marker-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 4px rgba(233, 228, 216, 0.08);
+}
+
+.auswatch-cluster-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auswatch-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: rgba(217, 164, 65, 0.15);
+  border: 1px solid rgba(217, 164, 65, 0.5);
+  color: #d9a441;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #12181d;
+  color: #e9e4d8;
+  border: 1px solid rgba(217, 164, 65, 0.3);
+  border-radius: 4px;
+}
+
+.leaflet-popup-tip {
+  background: #12181d;
+  border: 1px solid rgba(217, 164, 65, 0.3);
+}
+
+.leaflet-popup-close-button {
+  color: rgba(233, 228, 216, 0.5) !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #d9a441 !important;
+}
+
+.auswatch-popup dt {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: #d9a441;
+  margin-top: 0.5rem;
+}
+
+.auswatch-popup dt:first-child {
+  margin-top: 0;
+}
+
+.auswatch-popup dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: rgba(233, 228, 216, 0.85);
+}
+
+.auswatch-popup h3 {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 0.95rem;
+  margin: 0 0 0.35rem;
+  color: #e9e4d8;
+}
