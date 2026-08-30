@@ -75,3 +75,42 @@
   margin: 0 0 0.35rem;
   color: #e9e4d8;
 }
+
+.auswatch-timeline-heading {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: #d9a441;
+  margin: 0.5rem 0 0;
+}
+
+.auswatch-timeline {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0 0 0 0.6rem;
+  border-left: 1px solid rgba(217, 164, 65, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.auswatch-timeline li {
+  display: flex;
+  flex-direction: column;
+}
+
+.auswatch-timeline-date {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  color: rgba(233, 228, 216, 0.5);
+}
+
+.auswatch-timeline-label {
+  font-size: 0.8rem;
+  color: #e9e4d8;
+}
+
+.auswatch-timeline-note {
+  font-size: 0.75rem;
+  color: rgba(233, 228, 216, 0.7);
+}

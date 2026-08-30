@@ -1,4 +1,4 @@
-import { CameraStatus, CameraType, CaptureType } from "@/generated/prisma/enums";
+import { CameraStatus, CameraType, CaptureType, HistoryEventType } from "@/generated/prisma/enums";
 
 export const STATUS_COLOR: Record<CameraStatus, string> = {
   [CameraStatus.active]: "#C1443D",
@@ -26,4 +26,12 @@ export const CAPTURE_LABEL: Record<CaptureType, string> = {
   [CaptureType.both]: "Plates and faces",
   [CaptureType.general]: "General footage",
   [CaptureType.unclear]: "Unclear",
+};
+
+export const HISTORY_EVENT_LABEL: Record<HistoryEventType, string> = {
+  [HistoryEventType.sighted]: "Sighted",
+  [HistoryEventType.active]: "Verified active",
+  [HistoryEventType.removed]: "Removed",
+  [HistoryEventType.unconfirmed]: "Marked unconfirmed",
+  [HistoryEventType.relocated]: "Relocated",
 };

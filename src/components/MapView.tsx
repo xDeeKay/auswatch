@@ -9,7 +9,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { CameraStatus } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
-import { STATUS_COLOR, STATUS_LABEL, TYPE_LABEL, CAPTURE_LABEL } from "@/lib/camera-labels";
+import { STATUS_COLOR, STATUS_LABEL, TYPE_LABEL, CAPTURE_LABEL, HISTORY_EVENT_LABEL } from "@/lib/camera-labels";
 import { AUSTRALIA_CENTER, DEFAULT_ZOOM, MIN_ZOOM, DARK_TILE_URL, DARK_TILE_ATTRIBUTION } from "@/lib/map-constants";
 
 function markerIcon(status: CameraStatus) {
@@ -69,6 +69,27 @@ export default function MapView({ cameras }: { cameras: PublicCamera[] }) {
                   </>
                 )}
               </dl>
+
+              {camera.history.length > 0 && (
+                <>
+                  <p className="auswatch-timeline-heading">HISTORY</p>
+                  <ol className="auswatch-timeline">
+                    {camera.history.map((event) => (
+                      <li key={event.id}>
+                        <span className="auswatch-timeline-date">
+                          {dateFormatter.format(event.date)}
+                        </span>
+                        <span className="auswatch-timeline-label">
+                          {HISTORY_EVENT_LABEL[event.eventType]}
+                        </span>
+                        {event.note && (
+                          <span className="auswatch-timeline-note">{event.note}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
             </Popup>
           </Marker>
         ))}

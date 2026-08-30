@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/db";
-import { CameraStatus, CameraType, CaptureType, ModerationState } from "@/generated/prisma/enums";
+import { CameraStatus, CameraType, CaptureType, HistoryEventType, ModerationState } from "@/generated/prisma/enums";
+
+export type PublicHistoryEvent = {
+  id: string;
+  date: Date;
+  eventType: HistoryEventType;
+  note: string;
+};
 
 export type PublicCamera = {
   id: string;
@@ -11,6 +18,7 @@ export type PublicCamera = {
   status: CameraStatus;
   notes: string;
   createdAt: Date;
+  history: PublicHistoryEvent[];
 };
 
 export async function getCameras(): Promise<PublicCamera[]> {
@@ -26,6 +34,10 @@ export async function getCameras(): Promise<PublicCamera[]> {
       status: true,
       notes: true,
       createdAt: true,
+      history: {
+        select: { id: true, date: true, eventType: true, note: true },
+        orderBy: { date: "desc" },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
