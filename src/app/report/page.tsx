@@ -1,4 +1,8 @@
+import Link from "next/link";
 import SubmissionForm from "@/components/SubmissionForm";
+
+const linkClass =
+  "text-parchment underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber";
 
 export default function ReportPage() {
   return (
@@ -13,6 +17,14 @@ export default function ReportPage() {
         </p>
       </header>
       <SubmissionForm />
+      <footer className="flex gap-4 border-t border-parchment/10 pt-6">
+        <Link href="/" className={linkClass}>
+          View the map
+        </Link>
+        <Link href="/about" className={linkClass}>
+          About AusWatch
+        </Link>
+      </footer>
     </main>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Map from "@/components/Map";
 import { getCameras } from "@/lib/cameras";
 
@@ -15,9 +16,23 @@ export default async function Home() {
             Surveillance infrastructure map
           </h1>
         </div>
-        <p className="font-mono text-xs text-parchment/50">
-          {cameras.length} sites tracked
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="font-mono text-xs text-parchment/50">
+            {cameras.length} sites tracked
+          </p>
+          <Link
+            href="/about"
+            className="font-mono text-xs text-parchment/70 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
+          >
+            About
+          </Link>
+          <Link
+            href="/report"
+            className="font-mono text-xs text-parchment/70 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
+          >
+            Report a camera
+          </Link>
+        </div>
       </header>
       <div className="flex-1">
         <Map cameras={cameras} />
