@@ -51,3 +51,27 @@ export async function checkSubmissionRateLimit(
   const counts: RateLimitCounts = { signalCount, globalCount };
   return { ...evaluateRateLimit(counts, limits), counts };
 }
+
+export async function checkCorrectionRateLimit(
+  reporterToken: string
+): Promise<RateLimitDecision & { counts: RateLimitCounts }> {
+  const windowMinutes = requireEnvNumber("CORRECTION_RATE_LIMIT_WINDOW_MINUTES");
+  const cutoff = new Date(Date.now() - windowMinutes * 60 * 1000);
+
+  const [signalCount, globalCount] = await Promise.all([
+    prisma.correctionReport.count({
+      where: { reporterId: reporterToken, createdAt: { gte: cutoff } },
+    }),
+    prisma.correctionReport.count({
+      where: { createdAt: { gte: cutoff } },
+    }),
+  ]);
+
+  const limits: RateLimitThresholds = {
+    maxPerSignal: requireEnvNumber("CORRECTION_RATE_LIMIT_MAX_PER_SIGNAL_WINDOW"),
+    maxGlobal: requireEnvNumber("CORRECTION_RATE_LIMIT_MAX_GLOBAL_PER_WINDOW"),
+  };
+
+  const counts: RateLimitCounts = { signalCount, globalCount };
+  return { ...evaluateRateLimit(counts, limits), counts };
+}

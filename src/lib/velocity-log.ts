@@ -1,16 +1,15 @@
-import { requireEnvNumber } from "@/lib/required-env";
-
-export function logSubmissionVelocitySignal(event: {
+export function logVelocitySignal(event: {
+  kind: "submission" | "correction";
   scope: "signal" | "global";
   count: number;
   windowMinutes: number;
+  alertThreshold: number;
 }): void {
-  const alertThreshold = requireEnvNumber("SUBMISSION_VELOCITY_ALERT_THRESHOLD_PER_WINDOW");
-  if (event.count < alertThreshold) return;
+  if (event.count < event.alertThreshold) return;
 
   console.warn(
     JSON.stringify({
-      type: "submission_velocity_alert",
+      type: `${event.kind}_velocity_alert`,
       scope: event.scope,
       count: event.count,
       windowMinutes: event.windowMinutes,

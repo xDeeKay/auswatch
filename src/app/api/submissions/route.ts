@@ -5,7 +5,7 @@ import { submissionSchema } from "@/lib/validation/submission";
 import { buildCameraCreateData } from "@/lib/build-camera-create-data";
 import { getOrCreateReporterIdentity, reporterIdentityCookieHeader } from "@/lib/reporter-identity";
 import { checkSubmissionRateLimit } from "@/lib/rate-limit";
-import { logSubmissionVelocitySignal } from "@/lib/velocity-log";
+import { logVelocitySignal } from "@/lib/velocity-log";
 import { checkSensitiveSite } from "@/lib/sensitive-site-check";
 import { requireEnvNumber } from "@/lib/required-env";
 
@@ -31,8 +31,9 @@ export async function POST(request: Request) {
 
     const rateLimit = await checkSubmissionRateLimit(currentToken);
     const windowMinutes = requireEnvNumber("SUBMISSION_RATE_LIMIT_WINDOW_MINUTES");
-    logSubmissionVelocitySignal({ scope: "signal", count: rateLimit.counts.signalCount, windowMinutes });
-    logSubmissionVelocitySignal({ scope: "global", count: rateLimit.counts.globalCount, windowMinutes });
+    const alertThreshold = requireEnvNumber("SUBMISSION_VELOCITY_ALERT_THRESHOLD_PER_WINDOW");
+    logVelocitySignal({ kind: "submission", scope: "signal", count: rateLimit.counts.signalCount, windowMinutes, alertThreshold });
+    logVelocitySignal({ kind: "submission", scope: "global", count: rateLimit.counts.globalCount, windowMinutes, alertThreshold });
 
     if (!rateLimit.allowed) {
       return acceptedResponse(currentToken);
