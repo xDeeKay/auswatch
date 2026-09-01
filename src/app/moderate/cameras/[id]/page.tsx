@@ -7,6 +7,7 @@ import { TYPE_LABEL, CAPTURE_LABEL, STATUS_LABEL, HISTORY_EVENT_LABEL } from "@/
 import { REASON_CODE_LABEL, ACTION_TYPE_LABEL, MODERATION_STATE_LABEL } from "@/lib/moderation-labels";
 import { buildCorrectionDiffRows } from "@/lib/correction-diff";
 import { approveCorrection, rejectCorrection } from "@/lib/actions/corrections";
+import { addCameraNote } from "@/lib/actions/camera-notes";
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -51,6 +52,7 @@ export default async function CameraDetailPage({
         where: { status: CorrectionReportStatus.pending },
         orderBy: { createdAt: "asc" },
       },
+      internalNotes: { include: { author: true }, orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -233,6 +235,49 @@ export default async function CameraDetailPage({
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-heading text-base text-parchment">Moderator notes</h2>
+        <p className="text-xs text-parchment/50">
+          Internal only. Never shown on the public map or API.
+        </p>
+        {camera.internalNotes.length === 0 && (
+          <p className="text-sm text-parchment/50">No notes yet.</p>
+        )}
+        <ol className="flex flex-col gap-2">
+          {camera.internalNotes.map((note) => (
+            <li key={note.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+              <p className="font-mono text-xs text-parchment/50">
+                {dateFormatter.format(note.createdAt)} - {note.author.name ?? note.author.email ?? "Unknown moderator"}
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-parchment/85">{note.body}</p>
+            </li>
+          ))}
+        </ol>
+
+        <form
+          action={async (formData: FormData) => {
+            "use server";
+            await addCameraNote(camera.id, formData);
+          }}
+          className="flex flex-col gap-2"
+        >
+          <textarea
+            name="body"
+            className={noteClass}
+            placeholder="Add an internal note (visible to moderators only)"
+            rows={3}
+            maxLength={4000}
+            required
+          />
+          <button
+            type="submit"
+            className="self-start rounded border border-amber bg-amber/10 px-3 py-1.5 font-mono text-sm text-amber transition hover:bg-amber/20"
+          >
+            Add note
+          </button>
+        </form>
       </section>
     </main>
   );

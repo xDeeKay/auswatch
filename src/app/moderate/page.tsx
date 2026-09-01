@@ -60,6 +60,12 @@ export default async function ModeratePage() {
         >
           {pendingCorrectionCameraCount} pending correction{pendingCorrectionCameraCount === 1 ? "" : "s"} &rarr;
         </Link>
+        <Link
+          href="/moderate/cameras"
+          className="mt-1 block font-mono text-xs text-parchment/50 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
+        >
+          Browse cameras &rarr;
+        </Link>
       </header>
 
       <div className="flex flex-col gap-6">
