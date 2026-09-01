@@ -34,4 +34,5 @@ export const HISTORY_EVENT_LABEL: Record<HistoryEventType, string> = {
   [HistoryEventType.removed]: "Removed",
   [HistoryEventType.unconfirmed]: "Marked unconfirmed",
   [HistoryEventType.relocated]: "Relocated",
+  [HistoryEventType.corrected]: "Corrected",
 };

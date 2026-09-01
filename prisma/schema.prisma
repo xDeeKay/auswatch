@@ -42,6 +42,7 @@ enum HistoryEventType {
   removed
   unconfirmed
   relocated
+  corrected
 }
 
 enum SensitiveZoneCategory {
@@ -64,6 +65,14 @@ enum SensitiveSiteMatchSource {
 enum ModerationActionType {
   verify
   remove
+  correction_approve
+  correction_reject
+}
+
+enum CorrectionReportStatus {
+  pending
+  approved
+  rejected
 }
 
 enum ModerationReasonCode {
@@ -91,6 +100,8 @@ model Camera {
   history              HistoryEvent[]
   sensitiveSiteMatches SensitiveSiteMatch[]
   moderationActions    ModerationAction[]
+  correctionReports    CorrectionReport[]
+  internalNotes        CameraNote[]
 
   @@index([status])
   @@index([moderationState])
@@ -141,6 +152,45 @@ model SensitiveSiteMatch {
   @@index([source])
 }
 
+model CorrectionReport {
+  id         String                 @id @default(cuid())
+  camera     Camera                 @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  cameraId   String
+  reporterId String
+  status     CorrectionReportStatus @default(pending)
+
+  proposedLat      Float?
+  proposedLng      Float?
+  proposedType     CameraType?
+  proposedOperator String?
+  proposedCaptures CaptureType?
+  proposedNotes    String?
+
+  reporterNote String    @default("")
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+
+  proposedSensitiveSiteMatches     Json?
+  proposedSensitiveSiteCheckErrors Json?
+
+  moderationActions ModerationAction[]
+
+  @@index([cameraId, status])
+  @@index([reporterId, createdAt])
+}
+
+model CameraNote {
+  id        String   @id @default(cuid())
+  camera    Camera   @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  cameraId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([cameraId, createdAt])
+}
+
 model ReporterIdentity {
   id           String   @id @default(cuid())
   token        String   @unique
@@ -160,6 +210,7 @@ model User {
   accounts          Account[]
   sessions          Session[]
   moderationActions ModerationAction[]
+  cameraNotes       CameraNote[]
 }
 
 model Account {
@@ -197,16 +248,19 @@ model VerificationToken {
 }
 
 model ModerationAction {
-  id         String                @id @default(cuid())
-  camera     Camera                @relation(fields: [cameraId], references: [id], onDelete: Cascade)
-  cameraId   String
-  actor      User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
-  actorId    String
-  action     ModerationActionType
-  reasonCode ModerationReasonCode
-  note       String                @default("")
-  createdAt  DateTime              @default(now())
+  id                 String                @id @default(cuid())
+  camera             Camera                @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  cameraId           String
+  actor              User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  actorId            String
+  action             ModerationActionType
+  reasonCode         ModerationReasonCode
+  note               String                @default("")
+  createdAt          DateTime              @default(now())
+  correctionReport   CorrectionReport?     @relation(fields: [correctionReportId], references: [id], onDelete: SetNull)
+  correctionReportId String?
 
   @@index([cameraId])
   @@index([actorId])
+  @@index([correctionReportId])
 }
