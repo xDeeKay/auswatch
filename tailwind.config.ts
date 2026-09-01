@@ -13,6 +13,7 @@ const config: Config = {
           removed: "#5B8266",
           unconfirmed: "#6E7B86",
         },
+        error: "#C1443D",
       },
       fontFamily: {
         heading: ["var(--font-heading)", "sans-serif"],

@@ -7,36 +7,10 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "./map-theme.css";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { CameraStatus, CameraType, CaptureType } from "@/generated/prisma/enums";
+import { CameraStatus } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
-
-const STATUS_COLOR: Record<CameraStatus, string> = {
-  [CameraStatus.active]: "#C1443D",
-  [CameraStatus.removed]: "#5B8266",
-  [CameraStatus.unconfirmed]: "#6E7B86",
-};
-
-const STATUS_LABEL: Record<CameraStatus, string> = {
-  [CameraStatus.active]: "Active",
-  [CameraStatus.removed]: "Removed",
-  [CameraStatus.unconfirmed]: "Unconfirmed",
-};
-
-const TYPE_LABEL: Record<CameraType, string> = {
-  [CameraType.alpr]: "ALPR / plate reader",
-  [CameraType.facial]: "Facial recognition",
-  [CameraType.cctv]: "CCTV",
-  [CameraType.speed]: "Speed camera",
-  [CameraType.other]: "Other",
-};
-
-const CAPTURE_LABEL: Record<CaptureType, string> = {
-  [CaptureType.plates]: "number plates",
-  [CaptureType.faces]: "faces",
-  [CaptureType.both]: "plates and faces",
-  [CaptureType.general]: "general footage",
-  [CaptureType.unclear]: "unclear",
-};
+import { STATUS_COLOR, STATUS_LABEL, TYPE_LABEL, CAPTURE_LABEL } from "@/lib/camera-labels";
+import { AUSTRALIA_CENTER, DEFAULT_ZOOM, MIN_ZOOM, DARK_TILE_URL, DARK_TILE_ATTRIBUTION } from "@/lib/map-constants";
 
 function markerIcon(status: CameraStatus) {
   return L.divIcon({
@@ -64,15 +38,12 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
 export default function MapView({ cameras }: { cameras: PublicCamera[] }) {
   return (
     <MapContainer
-      center={[-25.2744, 133.7751]}
-      zoom={4}
-      minZoom={3}
+      center={AUSTRALIA_CENTER}
+      zoom={DEFAULT_ZOOM}
+      minZoom={MIN_ZOOM}
       className="h-full w-full"
     >
-      <TileLayer
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-        attribution="Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ"
-      />
+      <TileLayer url={DARK_TILE_URL} attribution={DARK_TILE_ATTRIBUTION} />
       <MarkerClusterGroup iconCreateFunction={clusterIcon}>
         {cameras.map((camera) => (
           <Marker

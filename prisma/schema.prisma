@@ -44,23 +44,42 @@ enum HistoryEventType {
   relocated
 }
 
+enum SensitiveZoneCategory {
+  dv_shelter
+  school
+  military
+  correctional
+  embassy
+  private_residence
+  security_detail
+  other
+}
+
+enum SensitiveSiteMatchSource {
+  manual_zone
+  osm_overpass
+  check_error
+}
+
 model Camera {
-  id              String          @id @default(cuid())
-  lat             Float
-  lng             Float
-  type            CameraType
-  operator        String
-  captures        CaptureType
-  status          CameraStatus    @default(unconfirmed)
-  notes           String          @default("")
-  reporterId      String // anonymized token only, never PII (IP, email, account)
-  moderationState ModerationState @default(pending)
-  createdAt       DateTime        @default(now())
-  history         HistoryEvent[]
+  id                   String               @id @default(cuid())
+  lat                  Float
+  lng                  Float
+  type                 CameraType
+  operator             String
+  captures             CaptureType
+  status               CameraStatus         @default(unconfirmed)
+  notes                String               @default("")
+  reporterId           String // anonymized token only, never PII (IP, email, account)
+  moderationState      ModerationState      @default(pending)
+  createdAt            DateTime             @default(now())
+  history              HistoryEvent[]
+  sensitiveSiteMatches SensitiveSiteMatch[]
 
   @@index([status])
   @@index([moderationState])
   @@index([type])
+  @@index([reporterId, createdAt])
 }
 
 model HistoryEvent {
@@ -72,4 +91,46 @@ model HistoryEvent {
   note      String           @default("")
 
   @@index([cameraId])
+}
+
+model SensitiveZone {
+  id           String                @id @default(cuid())
+  category     SensitiveZoneCategory
+  lat          Float
+  lng          Float
+  radiusMeters Int
+  note         String                @default("")
+  active       Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  matches      SensitiveSiteMatch[]
+
+  @@index([category])
+  @@index([active])
+}
+
+model SensitiveSiteMatch {
+  id             String                   @id @default(cuid())
+  camera         Camera                   @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  cameraId       String
+  source         SensitiveSiteMatchSource
+  category       SensitiveZoneCategory?
+  zone           SensitiveZone?           @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  zoneId         String?
+  distanceMeters Float?
+  detail         String                   @default("")
+  createdAt      DateTime                 @default(now())
+
+  @@index([cameraId])
+  @@index([source])
+}
+
+model ReporterIdentity {
+  id           String   @id @default(cuid())
+  token        String   @unique
+  signalHash   String
+  lastIssuedAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([signalHash])
 }
