@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "./map-theme.css";
+import Link from "next/link";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { CameraStatus } from "@/generated/prisma/enums";
@@ -90,6 +91,10 @@ export default function MapView({ cameras }: { cameras: PublicCamera[] }) {
                   </ol>
                 </>
               )}
+
+              <Link href={`/report/correction/${camera.id}`} className="auswatch-correction-link">
+                Suggest a correction &rarr;
+              </Link>
             </Popup>
           </Marker>
         ))}

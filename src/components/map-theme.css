@@ -114,3 +114,19 @@
   font-size: 0.75rem;
   color: rgba(233, 228, 216, 0.7);
 }
+
+.auswatch-correction-link {
+  display: block;
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(217, 164, 65, 0.2);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: rgba(233, 228, 216, 0.5);
+  text-decoration: none;
+}
+
+.auswatch-correction-link:hover {
+  color: #d9a441;
+}
