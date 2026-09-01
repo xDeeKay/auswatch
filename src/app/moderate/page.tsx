@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { ModerationState, ModerationReasonCode, SensitiveSiteMatchSource } from "@/generated/prisma/enums";
+import { ModerationState, ModerationReasonCode, SensitiveSiteMatchSource, CorrectionReportStatus } from "@/generated/prisma/enums";
 import { TYPE_LABEL, CAPTURE_LABEL } from "@/lib/camera-labels";
 import { REASON_CODE_LABEL, MATCH_SOURCE_LABEL, ZONE_CATEGORY_LABEL } from "@/lib/moderation-labels";
 import { verifyCamera, removeCamera } from "@/lib/actions/moderation";
@@ -34,11 +35,16 @@ export default async function ModeratePage() {
     );
   }
 
-  const cameras = await prisma.camera.findMany({
-    where: { moderationState: ModerationState.pending },
-    orderBy: { createdAt: "asc" },
-    include: { sensitiveSiteMatches: true },
-  });
+  const [cameras, pendingCorrectionCameraCount] = await Promise.all([
+    prisma.camera.findMany({
+      where: { moderationState: ModerationState.pending },
+      orderBy: { createdAt: "asc" },
+      include: { sensitiveSiteMatches: true },
+    }),
+    prisma.camera.count({
+      where: { correctionReports: { some: { status: CorrectionReportStatus.pending } } },
+    }),
+  ]);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
@@ -48,6 +54,12 @@ export default async function ModeratePage() {
         <p className="mt-2 text-sm text-parchment/70">
           {cameras.length} pending submission{cameras.length === 1 ? "" : "s"}
         </p>
+        <Link
+          href="/moderate/corrections"
+          className="mt-1 inline-block font-mono text-xs text-parchment/50 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
+        >
+          {pendingCorrectionCameraCount} pending correction{pendingCorrectionCameraCount === 1 ? "" : "s"} &rarr;
+        </Link>
       </header>
 
       <div className="flex flex-col gap-6">
@@ -103,7 +115,7 @@ export default async function ModeratePage() {
                     <div key={match.id} className="rounded border border-amber/40 bg-amber/5 px-3 py-2 text-sm">
                       <p className="font-mono text-xs tracking-[0.05em] text-amber">
                         {MATCH_SOURCE_LABEL[match.source]}
-                        {match.category ? ` — ${ZONE_CATEGORY_LABEL[match.category]}` : ""}
+                        {match.category ? ` - ${ZONE_CATEGORY_LABEL[match.category]}` : ""}
                       </p>
                       {match.distanceMeters !== null && (
                         <p className="mt-1 font-mono text-parchment/80">

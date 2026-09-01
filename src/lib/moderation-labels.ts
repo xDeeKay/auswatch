@@ -1,4 +1,24 @@
-import { ModerationReasonCode, SensitiveSiteMatchSource, SensitiveZoneCategory } from "@/generated/prisma/enums";
+import {
+  ModerationActionType,
+  ModerationReasonCode,
+  ModerationState,
+  SensitiveSiteMatchSource,
+  SensitiveZoneCategory,
+} from "@/generated/prisma/enums";
+
+export const ACTION_TYPE_LABEL: Record<ModerationActionType, string> = {
+  [ModerationActionType.verify]: "Verified",
+  [ModerationActionType.remove]: "Removed",
+  [ModerationActionType.correction_approve]: "Correction approved",
+  [ModerationActionType.correction_reject]: "Correction rejected",
+};
+
+export const MODERATION_STATE_LABEL: Record<ModerationState, string> = {
+  [ModerationState.pending]: "Pending review",
+  [ModerationState.verified]: "Verified",
+  [ModerationState.disputed]: "Disputed",
+  [ModerationState.removed]: "Removed",
+};
 
 export const REASON_CODE_LABEL: Record<ModerationReasonCode, string> = {
   [ModerationReasonCode.verified_accurate]: "Verified accurate",

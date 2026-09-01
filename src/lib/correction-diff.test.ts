@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { CameraType, CaptureType } from "@/generated/prisma/enums";
-import { buildCameraDiff } from "./correction-diff";
-import type { CameraSnapshot } from "./correction-diff";
+import { buildCameraDiff, buildCorrectionDiffRows } from "./correction-diff";
+import type { CameraSnapshot, ProposedCameraFields } from "./correction-diff";
 import type { ValidatedCorrection } from "@/lib/validation/correction";
 
 const camera: CameraSnapshot = {
@@ -61,5 +61,51 @@ describe("buildCameraDiff", () => {
   it("detects a captures change", () => {
     const diff = buildCameraDiff(camera, proposal({ captures: CaptureType.both }));
     expect(diff).toEqual({ captures: CaptureType.both });
+  });
+});
+
+function noProposal(overrides: Partial<ProposedCameraFields> = {}): ProposedCameraFields {
+  return {
+    proposedLat: null,
+    proposedLng: null,
+    proposedType: null,
+    proposedOperator: null,
+    proposedCaptures: null,
+    proposedNotes: null,
+    ...overrides,
+  };
+}
+
+describe("buildCorrectionDiffRows", () => {
+  it("returns no rows when nothing was proposed", () => {
+    expect(buildCorrectionDiffRows(camera, noProposal())).toEqual([]);
+  });
+
+  it("returns a location row when lat/lng differ from the live camera", () => {
+    const rows = buildCorrectionDiffRows(camera, noProposal({ proposedLat: -31.96, proposedLng: camera.lng }));
+    expect(rows).toEqual([
+      { field: "location", label: "Location", before: "-31.95050, 115.86050", after: "-31.96000, 115.86050" },
+    ]);
+  });
+
+  it("returns an operator row when the operator differs", () => {
+    const rows = buildCorrectionDiffRows(camera, noProposal({ proposedOperator: "NSW Police" }));
+    expect(rows).toEqual([
+      { field: "operator", label: "Operator", before: "WA Police", after: "NSW Police" },
+    ]);
+  });
+
+  it("self-heals: a field a sibling correction already fixed stops appearing as changed", () => {
+    const alreadyFixedCamera: CameraSnapshot = { ...camera, operator: "NSW Police" };
+    const rows = buildCorrectionDiffRows(alreadyFixedCamera, noProposal({ proposedOperator: "NSW Police" }));
+    expect(rows).toEqual([]);
+  });
+
+  it("returns multiple rows for a multi-field correction, in a stable field order", () => {
+    const rows = buildCorrectionDiffRows(
+      camera,
+      noProposal({ proposedType: CameraType.cctv, proposedOperator: "NSW Police" })
+    );
+    expect(rows.map((r) => r.field)).toEqual(["type", "operator"]);
   });
 });
