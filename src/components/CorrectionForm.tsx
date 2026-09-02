@@ -182,7 +182,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
 
       <div className="flex flex-col gap-1.5">
         <label className={fieldLabel} htmlFor="reporterNote">
-          WHAT'S WRONG (OPTIONAL)
+          WHAT&apos;S WRONG (OPTIONAL)
         </label>
         <textarea
           id="reporterNote"

@@ -19,7 +19,7 @@ export default async function CorrectionPage({
         <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
         <h1 className="font-heading text-lg text-parchment">Camera not found</h1>
         <p className="text-sm text-parchment/70">
-          This marker isn't currently on the verified public map.
+          This marker isn&apos;t currently on the verified public map.
         </p>
         <Link href="/" className={linkClass}>
           Back to the map
@@ -34,7 +34,7 @@ export default async function CorrectionPage({
         <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
         <h1 className="font-heading text-lg text-parchment">Suggest a correction</h1>
         <p className="mt-2 text-sm text-parchment/70">
-          Propose a fix to this marker's details or position. Corrections are
+          Propose a fix to this marker&apos;s details or position. Corrections are
           moderated before they take effect, even if you were the original submitter.
         </p>
       </header>
