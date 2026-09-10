@@ -9,7 +9,6 @@ async function main() {
   let scanned = 0;
   let resolved = 0;
   let unresolved = 0;
-  let skippedOverride = 0;
 
   for (;;) {
     const cameras = await prisma.camera.findMany({
@@ -36,8 +35,7 @@ async function main() {
     cursor = cameras[cameras.length - 1]!.id;
   }
 
-  const overrideCount = await prisma.camera.count({ where: { stateOverride: true } });
-  skippedOverride = overrideCount;
+  const skippedOverride = await prisma.camera.count({ where: { stateOverride: true } });
 
   console.log(`Scanned ${scanned} camera(s): ${resolved} resolved to a state, ${unresolved} unresolved (left null, needs manual review).`);
   console.log(`Skipped ${skippedOverride} camera(s) with an existing manual state override.`);

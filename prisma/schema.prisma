@@ -221,18 +221,18 @@ model ReporterIdentity {
 }
 
 model User {
-  id                       String             @id @default(cuid())
-  name                     String?
-  email                    String?            @unique
-  emailVerified            DateTime?
-  image                    String?
-  createdAt                DateTime           @default(now())
-  accounts                 Account[]
-  sessions                 Session[]
-  moderationActions        ModerationAction[]
-  cameraNotes              CameraNote[]
-  moderatorProfile         ModeratorProfile?
-  moderatorProfilesEdited  ModeratorProfile[] @relation("ModeratorProfileEditedBy")
+  id                      String             @id @default(cuid())
+  name                    String?
+  email                   String?            @unique
+  emailVerified           DateTime?
+  image                   String?
+  createdAt               DateTime           @default(now())
+  accounts                Account[]
+  sessions                Session[]
+  moderationActions       ModerationAction[]
+  cameraNotes             CameraNote[]
+  moderatorProfile        ModeratorProfile?
+  moderatorProfilesEdited ModeratorProfile[] @relation("ModeratorProfileEditedBy")
 }
 
 model Account {
@@ -270,16 +270,16 @@ model VerificationToken {
 }
 
 model ModerationAction {
-  id                 String                @id @default(cuid())
-  camera             Camera                @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  id                 String               @id @default(cuid())
+  camera             Camera               @relation(fields: [cameraId], references: [id], onDelete: Cascade)
   cameraId           String
-  actor              User                  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  actor              User                 @relation(fields: [actorId], references: [id], onDelete: Restrict)
   actorId            String
   action             ModerationActionType
   reasonCode         ModerationReasonCode
-  note               String                @default("")
-  createdAt          DateTime              @default(now())
-  correctionReport   CorrectionReport?     @relation(fields: [correctionReportId], references: [id], onDelete: SetNull)
+  note               String               @default("")
+  createdAt          DateTime             @default(now())
+  correctionReport   CorrectionReport?    @relation(fields: [correctionReportId], references: [id], onDelete: SetNull)
   correctionReportId String?
 
   @@index([cameraId])
