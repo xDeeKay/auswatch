@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { prisma } from "@/lib/db";
+import { ModeratorRole } from "@/generated/prisma/enums";
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -29,7 +30,7 @@ async function main() {
       create: {
         email,
         userId: user?.id ?? null,
-        role: "admin",
+        role: ModeratorRole.admin,
         isActive: true,
       },
       update: {
@@ -38,7 +39,7 @@ async function main() {
     });
 
     console.log(
-      `${email}: ${profile.role} profile ${profile.userId ? "linked to existing user" : "created, will link on first sign-in"}`
+      `${email}: ${profile.role} profile ${profile.userId ? "linked to an existing user" : "provisioned, will link on first sign-in"}`
     );
   }
 
