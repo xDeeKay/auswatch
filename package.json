@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "zone:add": "tsx scripts/add-sensitive-zone.ts",
+    "state:backfill": "tsx scripts/backfill-camera-state.ts",
+    "moderators:seed-existing": "tsx scripts/seed-existing-moderators.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
