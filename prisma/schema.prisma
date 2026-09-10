@@ -85,6 +85,22 @@ enum ModerationReasonCode {
   other
 }
 
+enum AuState {
+  nsw
+  vic
+  qld
+  wa
+  sa
+  tas
+  act
+  nt
+}
+
+enum ModeratorRole {
+  moderator
+  admin
+}
+
 model Camera {
   id                   String               @id @default(cuid())
   lat                  Float
@@ -96,6 +112,8 @@ model Camera {
   notes                String               @default("")
   reporterId           String // anonymized token only, never PII (IP, email, account)
   moderationState      ModerationState      @default(pending)
+  state                AuState?
+  stateOverride        Boolean              @default(false)
   createdAt            DateTime             @default(now())
   history              HistoryEvent[]
   sensitiveSiteMatches SensitiveSiteMatch[]
@@ -107,6 +125,7 @@ model Camera {
   @@index([moderationState])
   @@index([type])
   @@index([reporterId, createdAt])
+  @@index([state])
 }
 
 model HistoryEvent {
@@ -202,15 +221,18 @@ model ReporterIdentity {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  name              String?
-  email             String?            @unique
-  emailVerified     DateTime?
-  image             String?
-  accounts          Account[]
-  sessions          Session[]
-  moderationActions ModerationAction[]
-  cameraNotes       CameraNote[]
+  id                       String             @id @default(cuid())
+  name                     String?
+  email                    String?            @unique
+  emailVerified            DateTime?
+  image                    String?
+  createdAt                DateTime           @default(now())
+  accounts                 Account[]
+  sessions                 Session[]
+  moderationActions        ModerationAction[]
+  cameraNotes              CameraNote[]
+  moderatorProfile         ModeratorProfile?
+  moderatorProfilesEdited  ModeratorProfile[] @relation("ModeratorProfileEditedBy")
 }
 
 model Account {
@@ -263,4 +285,37 @@ model ModerationAction {
   @@index([cameraId])
   @@index([actorId])
   @@index([correctionReportId])
+}
+
+model ModeratorProfile {
+  id                 String           @id @default(cuid())
+  email              String           @unique
+  userId             String?          @unique
+  user               User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role               ModeratorRole    @default(moderator)
+  grants             ModeratorGrant[]
+  isActive           Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  deactivatedAt      DateTime?
+  lastEditedByUserId String?
+  lastEditedBy       User?            @relation("ModeratorProfileEditedBy", fields: [lastEditedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([isActive])
+  @@index([role])
+}
+
+model ModeratorGrant {
+  id                 String           @id @default(cuid())
+  moderatorProfile   ModeratorProfile @relation(fields: [moderatorProfileId], references: [id], onDelete: Cascade)
+  moderatorProfileId String
+  state              AuState
+  cameraType         CameraType
+  canView            Boolean          @default(true)
+  canAct             Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([moderatorProfileId, state, cameraType])
+  @@index([moderatorProfileId])
 }
