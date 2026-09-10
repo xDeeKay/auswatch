@@ -81,6 +81,8 @@ export function mapOsmTagsToCategory(tags: Record<string, string>): SensitiveZon
   return null;
 }
 
+const OVERPASS_QUERY_TIMEOUT_SECONDS = 10;
+
 type OverpassElement = {
   lat?: number;
   lon?: number;
@@ -91,7 +93,7 @@ type OverpassElement = {
 function buildOverpassQuery(point: Point, radiusMeters: number): string {
   const around = `around:${radiusMeters},${point.lat},${point.lng}`;
   return `
-    [out:json][timeout:20];
+    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_SECONDS}];
     (
       node(${around})[amenity~"^(school|kindergarten|childcare|embassy|prison|courthouse)$"];
       way(${around})[amenity~"^(school|kindergarten|childcare|embassy|prison|courthouse)$"];
