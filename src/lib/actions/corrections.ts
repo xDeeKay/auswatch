@@ -121,7 +121,7 @@ export async function approveCorrection(
       return { status: "error", message: result.message };
     }
 
-    revalidatePath("/moderate/corrections");
+    revalidatePath("/moderate");
     revalidatePath(`/moderate/cameras/${result.cameraId}`);
     return { status: "ok" };
   } catch {
@@ -189,7 +189,7 @@ export async function rejectCorrection(
       return { status: "error", message: result.message };
     }
 
-    revalidatePath("/moderate/corrections");
+    revalidatePath("/moderate");
     revalidatePath(`/moderate/cameras/${result.cameraId}`);
     return { status: "ok" };
   } catch {

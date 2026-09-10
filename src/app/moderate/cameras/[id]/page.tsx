@@ -7,7 +7,10 @@ import { REASON_CODE_LABEL, ACTION_TYPE_LABEL, MODERATION_STATE_LABEL } from "@/
 import { buildCorrectionDiffRows } from "@/lib/correction-diff";
 import { approveCorrection, rejectCorrection } from "@/lib/actions/corrections";
 import { addCameraNote } from "@/lib/actions/camera-notes";
+import { overrideCameraState } from "@/lib/actions/camera-state";
 import { requireModerator, canView, canAct } from "@/lib/moderator-access";
+import { AuState } from "@/generated/prisma/enums";
+import { STATE_LABEL } from "@/lib/au-state-labels";
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -77,10 +80,10 @@ export default async function CameraDetailPage({
         <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
         <h1 className="font-heading text-lg text-parchment">{TYPE_LABEL[camera.type]}</h1>
         <Link
-          href="/moderate/corrections"
+          href="/moderate"
           className="mt-1 inline-block font-mono text-xs text-parchment/50 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
         >
-          Back to pending corrections
+          Back to review queue
         </Link>
       </header>
 
@@ -108,6 +111,15 @@ export default async function CameraDetailPage({
           </dd>
         </div>
         <div>
+          <dt className="font-mono text-xs tracking-[0.05em] text-amber">STATE</dt>
+          <dd className="text-parchment/85">
+            {camera.state ? STATE_LABEL[camera.state] : "Unresolved"}
+            {camera.stateOverride && (
+              <span className="ml-1 font-mono text-xs text-parchment/50">(manually set)</span>
+            )}
+          </dd>
+        </div>
+        <div>
           <dt className="font-mono text-xs tracking-[0.05em] text-amber">ID</dt>
           <dd className="font-mono text-parchment/85">{camera.id}</dd>
         </div>
@@ -118,6 +130,42 @@ export default async function CameraDetailPage({
           </div>
         )}
       </dl>
+
+      {canActOnCamera && (
+        <section className="flex flex-col gap-2 rounded border border-parchment/10 p-4">
+          <h2 className="font-mono text-xs tracking-[0.05em] text-amber">CORRECT STATE</h2>
+          <p className="text-xs text-parchment/50">
+            Overrides the auto-derived state, for a border town or bad coordinates the
+            automatic derivation got wrong.
+          </p>
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              await overrideCameraState(camera.id, formData);
+            }}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <select
+              name="state"
+              defaultValue={camera.state ?? ""}
+              className={`${selectClass} w-auto`}
+            >
+              <option value="">Unresolved</option>
+              {Object.values(AuState).map((state) => (
+                <option key={state} value={state}>
+                  {STATE_LABEL[state]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="rounded border border-amber bg-amber/10 px-3 py-1.5 font-mono text-sm text-amber transition hover:bg-amber/20"
+            >
+              Set state
+            </button>
+          </form>
+        </section>
+      )}
 
       {camera.correctionReports.length > 0 && (
         <section className="flex flex-col gap-4">
