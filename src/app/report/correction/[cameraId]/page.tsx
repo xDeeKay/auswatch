@@ -37,6 +37,10 @@ export default async function CorrectionPage({
           Propose a fix to this marker&apos;s details or position. Corrections are
           moderated before they take effect, even if you were the original submitter.
         </p>
+        <p className="mt-2 text-sm text-parchment/70">
+          No account required. We don&rsquo;t ask for your name or email, and your IP
+          address is never stored, only a hashed signal used to prevent spam.
+        </p>
       </header>
       <CorrectionForm camera={camera} />
       <footer className="flex gap-4 border-t border-parchment/10 pt-6">

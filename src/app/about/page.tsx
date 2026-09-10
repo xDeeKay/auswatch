@@ -219,6 +219,11 @@ export default function AboutPage() {
           and lets people draw their own conclusions. Submissions are moderated, and markers
           on sensitive sites are excluded on principle, not just for legal cover.
         </p>
+        <p className="text-sm leading-relaxed text-parchment/70">
+          Reporting a camera never requires an account. AusWatch doesn&rsquo;t collect
+          submitters&rsquo; names, emails, or IP addresses, only a hashed signal used to
+          keep the review queue free of spam.
+        </p>
       </section>
 
       <footer className="flex gap-4 border-t border-parchment/10 pt-6">

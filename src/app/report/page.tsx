@@ -15,6 +15,10 @@ export default function ReportPage() {
           are moderated before appearing on the public map, and markers on sensitive sites
           are excluded on principle.
         </p>
+        <p className="mt-2 text-sm text-parchment/70">
+          No account required. We don&rsquo;t ask for your name or email, and your IP
+          address is never stored, only a hashed signal used to prevent spam.
+        </p>
       </header>
       <SubmissionForm />
       <footer className="flex gap-4 border-t border-parchment/10 pt-6">
