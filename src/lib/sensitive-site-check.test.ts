@@ -154,4 +154,24 @@ describe("checkSensitiveSite", () => {
     expect(result.matches).toHaveLength(0);
     expect(result.checkErrors).toHaveLength(0);
   });
+
+  it("declares a server-side Overpass query timeout well under the client's own abort budget", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ elements: [] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await checkSensitiveSite(point);
+
+    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = requestInit.body as string;
+    const match = /\[out:json\]\[timeout:(\d+)\]/.exec(decodeURIComponent(body));
+    expect(match).not.toBeNull();
+
+    const declaredTimeoutSeconds = Number(match![1]);
+    const clientTimeoutMs = Number(process.env.OVERPASS_TIMEOUT_MS);
+    expect(declaredTimeoutSeconds).toBeGreaterThan(0);
+    expect(declaredTimeoutSeconds * 1000).toBeLessThan(clientTimeoutMs);
+  });
 });
