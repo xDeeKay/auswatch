@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CameraType, CaptureType } from "@/generated/prisma/enums";
+import { AuState, CameraType, CaptureType } from "@/generated/prisma/enums";
 import { buildCameraDiff, buildCorrectionDiffRows } from "./correction-diff";
 import type { CameraSnapshot, ProposedCameraFields } from "./correction-diff";
 import type { ValidatedCorrection } from "@/lib/validation/correction";
@@ -11,6 +11,7 @@ const camera: CameraSnapshot = {
   operator: "WA Police",
   captures: CaptureType.plates,
   notes: "Mounted on a light pole.",
+  state: AuState.wa,
 };
 
 function proposal(overrides: Partial<ValidatedCorrection> = {}): ValidatedCorrection {

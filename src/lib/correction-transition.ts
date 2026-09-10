@@ -1,4 +1,6 @@
 import {
+  AuState,
+  CameraType,
   HistoryEventType,
   ModerationActionType,
   ModerationReasonCode,
@@ -8,6 +10,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { CameraSnapshot, ProposedCameraFields } from "@/lib/correction-diff";
 import { buildCorrectionDiffRows } from "@/lib/correction-diff";
 import type { SensitiveSiteMatchResult, SensitiveSiteCheckError } from "@/lib/sensitive-site-check";
+import { deriveAuState } from "@/lib/au-state";
 
 export type CorrectionDecisionInput = {
   correctionId: string;
@@ -39,6 +42,11 @@ export type CorrectionApproveTransitionPlan = {
   correctionUpdate: { status: CorrectionReportStatus; reviewedAt: Date };
   moderationAction: ModerationActionPlan;
   newSensitiveSiteMatches: Prisma.SensitiveSiteMatchCreateManyInput[];
+  // The camera's state/type after this correction is applied, for the caller
+  // to run a permission check against the post-correction values, not just
+  // the pre-correction ones.
+  resultingState: AuState | null;
+  resultingType: CameraType;
 };
 
 export type CorrectionRejectTransitionPlan = {
@@ -58,9 +66,18 @@ export function buildCorrectionApproveTransition(
   input: CorrectionDecisionInput,
   now: Date = new Date()
 ): CorrectionApproveTransitionPlan {
+  const locationChanged = correction.proposedLat !== null && correction.proposedLng !== null;
+  const derivedState = locationChanged
+    ? deriveAuState({ lat: correction.proposedLat!, lng: correction.proposedLng! })
+    : null;
+
   const cameraUpdate: Prisma.CameraUpdateInput = {};
   if (correction.proposedLat !== null) cameraUpdate.lat = correction.proposedLat;
   if (correction.proposedLng !== null) cameraUpdate.lng = correction.proposedLng;
+  if (locationChanged) {
+    cameraUpdate.state = derivedState;
+    cameraUpdate.stateOverride = false;
+  }
   if (correction.proposedType !== null) cameraUpdate.type = correction.proposedType;
   if (correction.proposedOperator !== null) cameraUpdate.operator = correction.proposedOperator;
   if (correction.proposedCaptures !== null) cameraUpdate.captures = correction.proposedCaptures;
@@ -87,8 +104,13 @@ export function buildCorrectionApproveTransition(
 
   const changeDescription = describeChanges(camera, correction);
 
+  const resultingState: AuState | null = locationChanged ? derivedState : camera.state;
+  const resultingType: CameraType = correction.proposedType ?? camera.type;
+
   return {
     cameraUpdate,
+    resultingState,
+    resultingType,
     historyEvent:
       changeDescription === null
         ? undefined

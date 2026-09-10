@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db";
-import { isModeratorEmail } from "@/lib/moderator-allowlist";
+import { resolveModeratorSignIn } from "@/lib/moderator-access";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -10,7 +10,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [GitHub],
   callbacks: {
     async signIn({ user, profile }) {
-      return isModeratorEmail(user.email ?? profile?.email, process.env.MODERATOR_EMAILS);
+      if (!user.id) return false;
+      return resolveModeratorSignIn(user.email ?? profile?.email, user.id);
     },
     async session({ session, user }) {
       if (session.user) {

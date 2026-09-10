@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { CorrectionReportStatus, ModerationReasonCode } from "@/generated/prisma/enums";
 import { TYPE_LABEL, CAPTURE_LABEL, STATUS_LABEL, HISTORY_EVENT_LABEL } from "@/lib/camera-labels";
@@ -8,6 +7,7 @@ import { REASON_CODE_LABEL, ACTION_TYPE_LABEL, MODERATION_STATE_LABEL } from "@/
 import { buildCorrectionDiffRows } from "@/lib/correction-diff";
 import { approveCorrection, rejectCorrection } from "@/lib/actions/corrections";
 import { addCameraNote } from "@/lib/actions/camera-notes";
+import { requireModerator, canView, canAct } from "@/lib/moderator-access";
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -26,13 +26,20 @@ export default async function CameraDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await auth();
+  const access = await requireModerator();
 
-  if (!session?.user) {
+  if (access.status !== "ok") {
     return (
       <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-6 py-20 text-center">
         <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
-        <h1 className="font-heading text-lg text-parchment">Moderator sign in required</h1>
+        <h1 className="font-heading text-lg text-parchment">
+          {access.status === "unauthenticated" ? "Moderator sign in required" : "Access revoked"}
+        </h1>
+        {access.status === "forbidden" && (
+          <p className="text-sm text-parchment/70">
+            Your moderator access has been revoked or is no longer active.
+          </p>
+        )}
         <a
           href="/moderate/sign-in"
           className="rounded border border-amber bg-amber/10 px-4 py-2 font-mono text-sm text-amber transition hover:bg-amber/20"
@@ -42,6 +49,8 @@ export default async function CameraDetailPage({
       </main>
     );
   }
+
+  const { profile } = access;
 
   const camera = await prisma.camera.findUnique({
     where: { id },
@@ -56,9 +65,11 @@ export default async function CameraDetailPage({
     },
   });
 
-  if (!camera) {
+  if (!camera || !canView(profile, { state: camera.state, type: camera.type })) {
     notFound();
   }
+
+  const canActOnCamera = canAct(profile, { state: camera.state, type: camera.type });
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
@@ -143,59 +154,65 @@ export default async function CameraDetailPage({
                   </tbody>
                 </table>
 
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <form
-                    action={async (formData: FormData) => {
-                      "use server";
-                      await approveCorrection(correction.id, formData);
-                    }}
-                    className="flex flex-col gap-2"
-                  >
-                    <select name="reasonCode" className={selectClass} defaultValue="" required>
-                      <option value="" disabled>
-                        Reason for approving
-                      </option>
-                      {Object.values(ModerationReasonCode).map((code) => (
-                        <option key={code} value={code}>
-                          {REASON_CODE_LABEL[code]}
-                        </option>
-                      ))}
-                    </select>
-                    <textarea name="note" className={noteClass} placeholder="Optional note" rows={2} />
-                    <button
-                      type="submit"
-                      className="rounded border border-amber bg-amber/10 px-3 py-1.5 font-mono text-sm text-amber transition hover:bg-amber/20"
+                {canActOnCamera ? (
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <form
+                      action={async (formData: FormData) => {
+                        "use server";
+                        await approveCorrection(correction.id, formData);
+                      }}
+                      className="flex flex-col gap-2"
                     >
-                      Approve
-                    </button>
-                  </form>
+                      <select name="reasonCode" className={selectClass} defaultValue="" required>
+                        <option value="" disabled>
+                          Reason for approving
+                        </option>
+                        {Object.values(ModerationReasonCode).map((code) => (
+                          <option key={code} value={code}>
+                            {REASON_CODE_LABEL[code]}
+                          </option>
+                        ))}
+                      </select>
+                      <textarea name="note" className={noteClass} placeholder="Optional note" rows={2} />
+                      <button
+                        type="submit"
+                        className="rounded border border-amber bg-amber/10 px-3 py-1.5 font-mono text-sm text-amber transition hover:bg-amber/20"
+                      >
+                        Approve
+                      </button>
+                    </form>
 
-                  <form
-                    action={async (formData: FormData) => {
-                      "use server";
-                      await rejectCorrection(correction.id, formData);
-                    }}
-                    className="flex flex-col gap-2"
-                  >
-                    <select name="reasonCode" className={selectClass} defaultValue="" required>
-                      <option value="" disabled>
-                        Reason for rejecting
-                      </option>
-                      {Object.values(ModerationReasonCode).map((code) => (
-                        <option key={code} value={code}>
-                          {REASON_CODE_LABEL[code]}
-                        </option>
-                      ))}
-                    </select>
-                    <textarea name="note" className={noteClass} placeholder="Optional note" rows={2} />
-                    <button
-                      type="submit"
-                      className="rounded border border-error bg-error/10 px-3 py-1.5 font-mono text-sm text-error transition hover:bg-error/20"
+                    <form
+                      action={async (formData: FormData) => {
+                        "use server";
+                        await rejectCorrection(correction.id, formData);
+                      }}
+                      className="flex flex-col gap-2"
                     >
-                      Reject
-                    </button>
-                  </form>
-                </div>
+                      <select name="reasonCode" className={selectClass} defaultValue="" required>
+                        <option value="" disabled>
+                          Reason for rejecting
+                        </option>
+                        {Object.values(ModerationReasonCode).map((code) => (
+                          <option key={code} value={code}>
+                            {REASON_CODE_LABEL[code]}
+                          </option>
+                        ))}
+                      </select>
+                      <textarea name="note" className={noteClass} placeholder="Optional note" rows={2} />
+                      <button
+                        type="submit"
+                        className="rounded border border-error bg-error/10 px-3 py-1.5 font-mono text-sm text-error transition hover:bg-error/20"
+                      >
+                        Reject
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <p className="mt-5 font-mono text-xs text-parchment/50">
+                    View only. You don&rsquo;t have permission to act on this ticket.
+                  </p>
+                )}
               </div>
             );
           })}

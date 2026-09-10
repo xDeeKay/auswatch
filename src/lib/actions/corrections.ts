@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { CorrectionReportStatus, ModerationReasonCode, ModerationState } from "@/generated/prisma/enums";
 import {
@@ -10,6 +9,7 @@ import {
   type CorrectionDecisionInput,
 } from "@/lib/correction-transition";
 import type { SensitiveSiteMatchResult, SensitiveSiteCheckError } from "@/lib/sensitive-site-check";
+import { requireModerator, assertCanAct, accessDeniedMessage } from "@/lib/moderator-access";
 
 export type ModerationActionResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -28,8 +28,12 @@ export async function approveCorrection(
   const note = String(formData.get("note") ?? "");
 
   try {
-    const session = await auth();
-    const actorId = session?.user?.id;
+    const access = await requireModerator();
+    if (access.status !== "ok") {
+      return { status: "error", message: accessDeniedMessage(access) };
+    }
+    const { profile } = access;
+    const actorId = profile.userId;
     if (!actorId) {
       return { status: "error", message: "Not authenticated." };
     }
@@ -46,6 +50,11 @@ export async function approveCorrection(
           ok: false as const,
           message: "This camera is no longer verified. Reject this correction instead of approving it.",
         };
+      }
+
+      const beforePermission = assertCanAct(profile, { state: camera.state, type: camera.type });
+      if (!beforePermission.ok) {
+        return { ok: false as const, message: beforePermission.message };
       }
 
       const input: CorrectionDecisionInput = {
@@ -71,6 +80,15 @@ export async function approveCorrection(
         camera,
         input
       );
+
+      const afterPermission = assertCanAct(profile, { state: plan.resultingState, type: plan.resultingType });
+      if (!afterPermission.ok) {
+        return {
+          ok: false as const,
+          message:
+            "This correction would move the camera outside your permitted states/camera types. A moderator with access to the new state or type must review it.",
+        };
+      }
 
       const updated = await tx.correctionReport.updateMany({
         where: { id: correctionId, status: CorrectionReportStatus.pending },
@@ -120,8 +138,12 @@ export async function rejectCorrection(
   const note = String(formData.get("note") ?? "");
 
   try {
-    const session = await auth();
-    const actorId = session?.user?.id;
+    const access = await requireModerator();
+    if (access.status !== "ok") {
+      return { status: "error", message: accessDeniedMessage(access) };
+    }
+    const { profile } = access;
+    const actorId = profile.userId;
     if (!actorId) {
       return { status: "error", message: "Not authenticated." };
     }
@@ -130,6 +152,16 @@ export async function rejectCorrection(
       const correction = await tx.correctionReport.findUnique({ where: { id: correctionId } });
       if (!correction) {
         return { ok: false as const, message: "This correction no longer exists." };
+      }
+
+      const camera = await tx.camera.findUnique({ where: { id: correction.cameraId } });
+      if (!camera) {
+        return { ok: false as const, message: "The camera this correction refers to no longer exists." };
+      }
+
+      const permission = assertCanAct(profile, { state: camera.state, type: camera.type });
+      if (!permission.ok) {
+        return { ok: false as const, message: permission.message };
       }
 
       const plan = buildCorrectionRejectTransition({

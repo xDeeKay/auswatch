@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildCameraCreateData } from "./build-camera-create-data";
-import { CameraType, CaptureType } from "@/generated/prisma/enums";
+import { CameraType, CaptureType, AuState } from "@/generated/prisma/enums";
 import type { ValidatedSubmission } from "@/lib/validation/submission";
 
 const baseInput: ValidatedSubmission = {
@@ -23,7 +23,13 @@ describe("buildCameraCreateData", () => {
       captures: CaptureType.plates,
       notes: "Test note",
       reporterId: "server-token-123",
+      state: AuState.wa,
     });
+  });
+
+  it("resolves state to null for coordinates that don't fall in any state", () => {
+    const data = buildCameraCreateData({ ...baseInput, lat: -40, lng: 160 }, "server-token-789");
+    expect(data.state).toBeNull();
   });
 
   it("never includes status or moderationState, even if adversarially present on the input object", () => {

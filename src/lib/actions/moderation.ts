@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { ModerationState, ModerationReasonCode } from "@/generated/prisma/enums";
 import {
@@ -10,6 +9,7 @@ import {
   type ModerationDecisionInput,
   type ModerationTransitionPlan,
 } from "@/lib/moderation-transition";
+import { requireModerator, assertCanAct, accessDeniedMessage } from "@/lib/moderator-access";
 
 export type ModerationActionResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -26,28 +26,48 @@ async function applyTransition(
   build: (input: ModerationDecisionInput) => ModerationTransitionPlan
 ): Promise<ModerationActionResult> {
   try {
-    const session = await auth();
-    const actorId = session?.user?.id;
+    const access = await requireModerator();
+    if (access.status !== "ok") {
+      return { status: "error", message: accessDeniedMessage(access) };
+    }
+    const { profile } = access;
+    const actorId = profile.userId;
     if (!actorId) {
       return { status: "error", message: "Not authenticated." };
     }
 
-    const plan = build({ cameraId, actorId, reasonCode, note });
+    const outcome = await prisma.$transaction(async (tx) => {
+      const camera = await tx.camera.findUnique({
+        where: { id: cameraId },
+        select: { state: true, type: true, moderationState: true },
+      });
+      if (!camera || camera.moderationState !== ModerationState.pending) {
+        return "already-reviewed" as const;
+      }
 
-    const updated = await prisma.$transaction(async (tx) => {
+      const permission = assertCanAct(profile, { state: camera.state, type: camera.type });
+      if (!permission.ok) {
+        return "forbidden" as const;
+      }
+
+      const plan = build({ cameraId, actorId, reasonCode, note });
+
       const result = await tx.camera.updateMany({
         where: { id: cameraId, moderationState: ModerationState.pending },
         data: plan.cameraUpdate,
       });
       if (result.count === 0) {
-        return false;
+        return "already-reviewed" as const;
       }
       await tx.historyEvent.create({ data: plan.historyEvent });
       await tx.moderationAction.create({ data: plan.moderationAction });
-      return true;
+      return "ok" as const;
     });
 
-    if (!updated) {
+    if (outcome === "forbidden") {
+      return { status: "error", message: "You do not have permission to act on this ticket." };
+    }
+    if (outcome === "already-reviewed") {
       return { status: "error", message: "This submission was already reviewed." };
     }
 
