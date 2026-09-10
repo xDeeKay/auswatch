@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  AuState,
   CameraType,
   CaptureType,
   CorrectionReportStatus,
@@ -19,6 +20,7 @@ const camera: CameraSnapshot = {
   operator: "WA Police",
   captures: CaptureType.plates,
   notes: "Mounted on a light pole.",
+  state: AuState.wa,
 };
 
 const now = new Date("2026-09-01T00:00:00.000Z");
@@ -56,14 +58,83 @@ describe("buildCorrectionApproveTransition", () => {
     expect(plan.cameraUpdate).toEqual({ operator: "NSW Police" });
   });
 
-  it("sets both lat and lng together for a location-only correction", () => {
+  it("sets lat, lng, and the re-derived state together for a location-only correction", () => {
     const plan = buildCorrectionApproveTransition(
       pendingCorrection({ proposedLat: -31.96, proposedLng: 115.87 }),
       camera,
       input,
       now
     );
-    expect(plan.cameraUpdate).toEqual({ lat: -31.96, lng: 115.87 });
+    expect(plan.cameraUpdate).toEqual({
+      lat: -31.96,
+      lng: 115.87,
+      state: AuState.wa,
+      stateOverride: false,
+    });
+  });
+
+  it("does not touch state or stateOverride when location did not change", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedOperator: "NSW Police" }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate).not.toHaveProperty("state");
+    expect(plan.cameraUpdate).not.toHaveProperty("stateOverride");
+  });
+
+  it("clears a prior manual state override when the location is corrected", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedLat: -33.8688, proposedLng: 151.2093 }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate.state).toBe(AuState.nsw);
+    expect(plan.cameraUpdate.stateOverride).toBe(false);
+  });
+
+  it("resolves state to null when the corrected location falls outside every state", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedLat: -40, proposedLng: 160 }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate.state).toBeNull();
+  });
+
+  it("resultingState/resultingType reflect the camera unchanged when nothing relevant was proposed", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedOperator: "NSW Police" }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.resultingState).toBe(camera.state);
+    expect(plan.resultingType).toBe(camera.type);
+  });
+
+  it("resultingState reflects the newly-derived state when location changes", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedLat: -33.8688, proposedLng: 151.2093 }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.resultingState).toBe(AuState.nsw);
+  });
+
+  it("resultingType reflects the newly-proposed type when type changes", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedType: CameraType.cctv }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.resultingType).toBe(CameraType.cctv);
+    expect(plan.resultingState).toBe(camera.state);
   });
 
   it("sets every proposed field for a multi-field correction", () => {

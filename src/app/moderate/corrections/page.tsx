@@ -1,17 +1,24 @@
 import Link from "next/link";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { CorrectionReportStatus } from "@/generated/prisma/enums";
 import { TYPE_LABEL } from "@/lib/camera-labels";
+import { requireModerator, canView } from "@/lib/moderator-access";
 
 export default async function ModerateCorrectionsPage() {
-  const session = await auth();
+  const access = await requireModerator();
 
-  if (!session?.user) {
+  if (access.status !== "ok") {
     return (
       <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-6 py-20 text-center">
         <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
-        <h1 className="font-heading text-lg text-parchment">Moderator sign in required</h1>
+        <h1 className="font-heading text-lg text-parchment">
+          {access.status === "unauthenticated" ? "Moderator sign in required" : "Access revoked"}
+        </h1>
+        {access.status === "forbidden" && (
+          <p className="text-sm text-parchment/70">
+            Your moderator access has been revoked or is no longer active.
+          </p>
+        )}
         <a
           href="/moderate/sign-in"
           className="rounded border border-amber bg-amber/10 px-4 py-2 font-mono text-sm text-amber transition hover:bg-amber/20"
@@ -22,13 +29,19 @@ export default async function ModerateCorrectionsPage() {
     );
   }
 
-  const cameras = await prisma.camera.findMany({
+  const { profile } = access;
+
+  const matchingCameras = await prisma.camera.findMany({
     where: { correctionReports: { some: { status: CorrectionReportStatus.pending } } },
     include: {
       _count: { select: { correctionReports: { where: { status: CorrectionReportStatus.pending } } } },
     },
     orderBy: { createdAt: "asc" },
   });
+
+  const cameras = matchingCameras.filter((camera) =>
+    canView(profile, { state: camera.state, type: camera.type })
+  );
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">

@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { cameraNoteSchema } from "@/lib/validation/camera-note";
+import { requireModerator, canView, accessDeniedMessage } from "@/lib/moderator-access";
 
 export type CameraNoteActionResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -17,10 +17,25 @@ export async function addCameraNote(
   }
 
   try {
-    const session = await auth();
-    const authorId = session?.user?.id;
+    const access = await requireModerator();
+    if (access.status !== "ok") {
+      return { status: "error", message: accessDeniedMessage(access) };
+    }
+    const { profile } = access;
+    const authorId = profile.userId;
     if (!authorId) {
       return { status: "error", message: "Not authenticated." };
+    }
+
+    const camera = await prisma.camera.findUnique({
+      where: { id: cameraId },
+      select: { state: true, type: true },
+    });
+    if (!camera) {
+      return { status: "error", message: "This camera no longer exists." };
+    }
+    if (!canView(profile, { state: camera.state, type: camera.type })) {
+      return { status: "error", message: "You do not have permission to view this camera." };
     }
 
     await prisma.cameraNote.create({

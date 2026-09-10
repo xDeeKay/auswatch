@@ -1,4 +1,4 @@
-import type { CameraType, CaptureType } from "@/generated/prisma/enums";
+import type { AuState, CameraType, CaptureType } from "@/generated/prisma/enums";
 import type { ValidatedCorrection } from "@/lib/validation/correction";
 import { TYPE_LABEL, CAPTURE_LABEL } from "@/lib/camera-labels";
 
@@ -9,6 +9,7 @@ export type CameraSnapshot = {
   operator: string;
   captures: CaptureType;
   notes: string;
+  state: AuState | null;
 };
 
 export type CameraFieldDiff = {

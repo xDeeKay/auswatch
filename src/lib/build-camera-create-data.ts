@@ -1,5 +1,6 @@
 import type { ValidatedSubmission } from "@/lib/validation/submission";
 import type { Prisma } from "@/generated/prisma/client";
+import { deriveAuState } from "@/lib/au-state";
 
 export function buildCameraCreateData(
   input: ValidatedSubmission,
@@ -13,5 +14,6 @@ export function buildCameraCreateData(
     captures: input.captures,
     notes: input.notes,
     reporterId: reporterToken,
+    state: deriveAuState({ lat: input.lat, lng: input.lng }),
   };
 }
