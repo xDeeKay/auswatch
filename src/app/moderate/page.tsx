@@ -105,6 +105,14 @@ export default async function ModeratePage({
         >
           Browse cameras &rarr;
         </Link>
+        {isAdmin && (
+          <Link
+            href="/admin/moderators"
+            className="mt-1 block font-mono text-xs text-parchment/50 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
+          >
+            Manage moderators &rarr;
+          </Link>
+        )}
       </header>
 
       <form method="get" className="flex flex-wrap items-end gap-3">
