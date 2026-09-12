@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { CorrectionReportStatus, ModerationReasonCode, ModerationState } from "@/generated/prisma/enums";
@@ -57,12 +58,14 @@ export async function approveCorrection(
         return { ok: false as const, message: beforePermission.message };
       }
 
+      const moderationActionId = randomUUID();
       const input: CorrectionDecisionInput = {
         correctionId,
         cameraId: correction.cameraId,
         actorId,
         reasonCode,
         note,
+        moderationActionId,
       };
       const plan = buildCorrectionApproveTransition(
         {
@@ -109,10 +112,21 @@ export async function approveCorrection(
       if (plan.historyEvent) {
         await tx.historyEvent.create({ data: plan.historyEvent });
       }
+      let createdSensitiveSiteMatchIds: string[] = [];
       if (plan.newSensitiveSiteMatches.length > 0) {
-        await tx.sensitiveSiteMatch.createMany({ data: plan.newSensitiveSiteMatches });
+        const created = await tx.sensitiveSiteMatch.createManyAndReturn({
+          data: plan.newSensitiveSiteMatches,
+          select: { id: true },
+        });
+        createdSensitiveSiteMatchIds = created.map((m) => m.id);
       }
       await tx.moderationAction.create({ data: plan.moderationAction });
+      await tx.auditLogEntry.create({
+        data: {
+          ...plan.auditLogEntry,
+          after: { ...plan.auditLogEntry.after, createdSensitiveSiteMatchIds },
+        },
+      });
 
       return { ok: true as const, cameraId: correction.cameraId };
     });
@@ -170,6 +184,7 @@ export async function rejectCorrection(
         actorId,
         reasonCode,
         note,
+        moderationActionId: randomUUID(),
       });
 
       const updated = await tx.correctionReport.updateMany({
@@ -181,6 +196,7 @@ export async function rejectCorrection(
       }
 
       await tx.moderationAction.create({ data: plan.moderationAction });
+      await tx.auditLogEntry.create({ data: plan.auditLogEntry });
 
       return { ok: true as const, cameraId: correction.cameraId };
     });

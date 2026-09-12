@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { AuState, HistoryEventType } from "@/generated/prisma/enums";
-import { STATE_LABEL } from "@/lib/au-state-labels";
+import { AuState } from "@/generated/prisma/enums";
 import { requireModerator, assertCanAct, accessDeniedMessage } from "@/lib/moderator-access";
+import { buildStateOverrideTransition } from "@/lib/camera-state-transition";
 
 export type CameraStateActionResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -30,11 +30,15 @@ export async function overrideCameraState(
       return { status: "error", message: accessDeniedMessage(access) };
     }
     const { profile } = access;
+    const actorId = profile.userId;
+    if (!actorId) {
+      return { status: "error", message: "Not authenticated." };
+    }
 
     const outcome = await prisma.$transaction(async (tx) => {
       const camera = await tx.camera.findUnique({
         where: { id: cameraId },
-        select: { state: true, type: true },
+        select: { state: true, type: true, stateOverride: true },
       });
       if (!camera) return "not-found" as const;
 
@@ -46,18 +50,17 @@ export async function overrideCameraState(
 
       if (camera.state === newState) return "unchanged" as const;
 
-      await tx.camera.update({
-        where: { id: cameraId },
-        data: { state: newState, stateOverride: true },
+      const plan = buildStateOverrideTransition({
+        cameraId,
+        actorId,
+        stateBefore: camera.state,
+        stateOverrideBefore: camera.stateOverride,
+        newState,
       });
-      await tx.historyEvent.create({
-        data: {
-          cameraId,
-          date: new Date(),
-          eventType: HistoryEventType.corrected,
-          note: `State manually set to ${newState ? STATE_LABEL[newState] : "Unresolved"} (was ${camera.state ? STATE_LABEL[camera.state] : "Unresolved"}).`,
-        },
-      });
+
+      await tx.camera.update({ where: { id: cameraId }, data: plan.cameraUpdate });
+      await tx.historyEvent.create({ data: plan.historyEvent });
+      await tx.auditLogEntry.create({ data: plan.auditLogEntry });
       return "ok" as const;
     });
 

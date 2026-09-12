@@ -13,6 +13,8 @@ const input = {
   actorId: "user-1",
   reasonCode: ModerationReasonCode.verified_accurate,
   note: "Looks accurate, plate reader confirmed by nearby streetview imagery.",
+  statusBefore: CameraStatus.unconfirmed,
+  moderationActionId: "action-1",
 };
 
 const now = new Date("2026-08-30T09:00:00.000Z");
@@ -43,11 +45,25 @@ describe("buildVerifyTransition", () => {
 
   it("logs a verify moderation action with the reason code and actor", () => {
     expect(plan.moderationAction).toEqual({
+      id: "action-1",
       cameraId: "cam-1",
       actorId: "user-1",
       action: ModerationActionType.verify,
       reasonCode: ModerationReasonCode.verified_accurate,
       note: input.note,
+    });
+  });
+
+  it("logs an audit entry capturing the moderation state and status transition", () => {
+    expect(plan.auditLogEntry).toEqual({
+      entityType: "camera",
+      entityId: "cam-1",
+      action: "camera_verify",
+      actorId: "user-1",
+      before: { moderationState: ModerationState.pending, status: CameraStatus.unconfirmed },
+      after: { moderationState: ModerationState.verified, status: CameraStatus.active },
+      summary: "Verified this submission.",
+      moderationActionId: "action-1",
     });
   });
 });
@@ -78,11 +94,25 @@ describe("buildRemoveTransition", () => {
 
   it("logs a remove moderation action with the reason code and actor", () => {
     expect(plan.moderationAction).toEqual({
+      id: "action-1",
       cameraId: "cam-1",
       actorId: "user-1",
       action: ModerationActionType.remove,
       reasonCode: ModerationReasonCode.verified_accurate,
       note: input.note,
+    });
+  });
+
+  it("logs an audit entry capturing the moderation state and status transition", () => {
+    expect(plan.auditLogEntry).toEqual({
+      entityType: "camera",
+      entityId: "cam-1",
+      action: "camera_remove",
+      actorId: "user-1",
+      before: { moderationState: ModerationState.pending, status: CameraStatus.unconfirmed },
+      after: { moderationState: ModerationState.removed, status: CameraStatus.removed },
+      summary: "Removed this submission.",
+      moderationActionId: "action-1",
     });
   });
 });

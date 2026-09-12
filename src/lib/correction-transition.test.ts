@@ -13,7 +13,7 @@ import { buildCorrectionApproveTransition, buildCorrectionRejectTransition } fro
 import type { PendingCorrection } from "./correction-transition";
 import type { CameraSnapshot } from "./correction-diff";
 
-const camera: CameraSnapshot = {
+const camera: CameraSnapshot & { stateOverride: boolean } = {
   lat: -31.9505,
   lng: 115.8605,
   type: CameraType.alpr,
@@ -21,6 +21,7 @@ const camera: CameraSnapshot = {
   captures: CaptureType.plates,
   notes: "Mounted on a light pole.",
   state: AuState.wa,
+  stateOverride: false,
 };
 
 const now = new Date("2026-09-01T00:00:00.000Z");
@@ -45,6 +46,7 @@ const input = {
   actorId: "actor-1",
   reasonCode: ModerationReasonCode.verified_accurate,
   note: "looks right",
+  moderationActionId: "action-1",
 };
 
 describe("buildCorrectionApproveTransition", () => {
@@ -243,12 +245,50 @@ describe("buildCorrectionApproveTransition", () => {
       now
     );
     expect(plan.moderationAction).toEqual({
+      id: input.moderationActionId,
       cameraId: input.cameraId,
       correctionReportId: input.correctionId,
       actorId: input.actorId,
       action: ModerationActionType.correction_approve,
       reasonCode: input.reasonCode,
       note: input.note,
+    });
+  });
+
+  it("logs an audit entry capturing only the changed camera fields, before and after", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedOperator: "NSW Police" }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.auditLogEntry).toEqual({
+      entityType: "camera",
+      entityId: input.cameraId,
+      action: "camera_correction_approve",
+      actorId: input.actorId,
+      before: { operator: "WA Police" },
+      after: { operator: "NSW Police", correctionReportId: input.correctionId, createdSensitiveSiteMatchIds: [] },
+      summary: 'Operator corrected from "WA Police" to "NSW Police"',
+      moderationActionId: input.moderationActionId,
+    });
+  });
+
+  it("audit entry before/after includes stateOverride when the location changed", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedLat: -31.96, proposedLng: 115.87 }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.auditLogEntry.before).toEqual({ lat: camera.lat, lng: camera.lng, state: camera.state, stateOverride: false });
+    expect(plan.auditLogEntry.after).toEqual({
+      lat: -31.96,
+      lng: 115.87,
+      state: AuState.wa,
+      stateOverride: false,
+      correctionReportId: input.correctionId,
+      createdSensitiveSiteMatchIds: [],
     });
   });
 });
@@ -267,12 +307,27 @@ describe("buildCorrectionRejectTransition", () => {
   it("logs a correction_reject moderation action referencing the correction", () => {
     const plan = buildCorrectionRejectTransition(input, now);
     expect(plan.moderationAction).toEqual({
+      id: input.moderationActionId,
       cameraId: input.cameraId,
       correctionReportId: input.correctionId,
       actorId: input.actorId,
       action: ModerationActionType.correction_reject,
       reasonCode: input.reasonCode,
       note: input.note,
+    });
+  });
+
+  it("logs an audit entry restoring the correction to pending on revert", () => {
+    const plan = buildCorrectionRejectTransition(input, now);
+    expect(plan.auditLogEntry).toEqual({
+      entityType: "correction_report",
+      entityId: input.correctionId,
+      action: "camera_correction_reject",
+      actorId: input.actorId,
+      before: { status: "pending", reviewedAt: null },
+      after: { status: "rejected", reviewedAt: now.toISOString() },
+      summary: "Rejected this correction.",
+      moderationActionId: input.moderationActionId,
     });
   });
 });

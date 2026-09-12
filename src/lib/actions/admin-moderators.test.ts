@@ -11,6 +11,7 @@ const moderatorProfileCountMock = vi.fn();
 const moderatorGrantDeleteManyMock = vi.fn();
 const moderatorGrantUpdateMock = vi.fn();
 const moderatorGrantCreateManyMock = vi.fn();
+const auditLogEntryCreateMock = vi.fn();
 const transactionMock = vi.fn((ops: unknown[]) => Promise.all(ops));
 
 vi.mock("@/auth", () => ({
@@ -34,13 +35,15 @@ vi.mock("@/lib/db", () => ({
       update: (...args: unknown[]) => moderatorGrantUpdateMock(...args),
       createMany: (...args: unknown[]) => moderatorGrantCreateManyMock(...args),
     },
+    auditLogEntry: {
+      create: (...args: unknown[]) => auditLogEntryCreateMock(...args),
+    },
     $transaction: (ops: unknown[]) => transactionMock(ops),
   },
 }));
 
-const { createModeratorProfile, updateModeratorPrivileges, deactivateModerator } = await import(
-  "./admin-moderators"
-);
+const { createModeratorProfile, updateModeratorPrivileges, deactivateModerator, reactivateModerator } =
+  await import("./admin-moderators");
 
 function adminProfile(overrides: Partial<ModeratorProfileWithGrants> = {}): ModeratorProfileWithGrants {
   return {
@@ -122,14 +125,39 @@ describe("createModeratorProfile", () => {
     await createModeratorProfile(formData);
 
     expect(moderatorProfileCreateMock).toHaveBeenCalledWith({
-      data: {
+      data: expect.objectContaining({
         email: "mod@example.com",
         role: ModeratorRole.moderator,
         lastEditedByUserId: "admin-user-1",
         grants: {
           create: [{ state: AuState.wa, cameraType: CameraType.speed, canView: true, canAct: true }],
         },
-      },
+      }),
+    });
+  });
+
+  it("logs a moderator_create audit entry with the granted role and grants", async () => {
+    moderatorProfileFindUniqueMock
+      .mockResolvedValueOnce(adminProfile())
+      .mockResolvedValueOnce(null);
+
+    const formData = new FormData();
+    formData.set("email", "mod@example.com");
+    formData.set("role", ModeratorRole.moderator);
+    formData.set(grantFieldName(AuState.wa, CameraType.speed, "act"), "on");
+
+    await createModeratorProfile(formData);
+
+    expect(auditLogEntryCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entityType: "moderator_profile",
+        action: "moderator_create",
+        actorId: "admin-user-1",
+        after: {
+          role: ModeratorRole.moderator,
+          grants: [{ state: AuState.wa, cameraType: CameraType.speed, canView: true, canAct: true }],
+        },
+      }),
     });
   });
 
@@ -146,12 +174,12 @@ describe("createModeratorProfile", () => {
     await createModeratorProfile(formData);
 
     expect(moderatorProfileCreateMock).toHaveBeenCalledWith({
-      data: {
+      data: expect.objectContaining({
         email: "admin2@example.com",
         role: ModeratorRole.admin,
         lastEditedByUserId: "admin-user-1",
         grants: { create: [] },
-      },
+      }),
     });
   });
 });
@@ -188,6 +216,15 @@ describe("updateModeratorPrivileges", () => {
       where: { id: "target-1" },
       data: { role: ModeratorRole.moderator, lastEditedByUserId: "admin-user-1" },
     });
+    expect(auditLogEntryCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entityType: "moderator_profile",
+        action: "moderator_update",
+        actorId: "admin-user-1",
+        before: { role: ModeratorRole.admin, grants: [] },
+        after: { role: ModeratorRole.moderator, grants: [] },
+      }),
+    });
   });
 
   it("deletes every existing grant when promoting a moderator to admin", async () => {
@@ -218,6 +255,16 @@ describe("updateModeratorPrivileges", () => {
     expect(result.status).toBe("ok");
     expect(moderatorGrantDeleteManyMock).toHaveBeenCalledWith({ where: { id: { in: ["g1"] } } });
     expect(moderatorGrantCreateManyMock).not.toHaveBeenCalled();
+    expect(auditLogEntryCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "moderator_update",
+        before: {
+          role: ModeratorRole.moderator,
+          grants: [{ state: AuState.wa, cameraType: CameraType.speed, canView: true, canAct: true }],
+        },
+        after: { role: ModeratorRole.admin, grants: [] },
+      }),
+    });
   });
 
   it("normalizes a canAct-without-canView cell when saving grant changes", async () => {
@@ -262,6 +309,13 @@ describe("deactivateModerator", () => {
     expect(moderatorProfileUpdateMock).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "target-1" }, data: expect.objectContaining({ isActive: false }) })
     );
+    expect(auditLogEntryCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entityType: "moderator_profile",
+        action: "moderator_deactivate",
+        before: { isActive: true, deactivatedAt: null },
+      }),
+    });
   });
 
   it("allows deactivating a non-admin moderator without checking the admin count", async () => {
@@ -282,5 +336,51 @@ describe("deactivateModerator", () => {
 
     expect(result.status).toBe("error");
     expect(moderatorProfileUpdateMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("reactivateModerator", () => {
+  it("rejects when the signed-in actor is not an admin", async () => {
+    moderatorProfileFindUniqueMock.mockResolvedValueOnce(adminProfile({ role: ModeratorRole.moderator }));
+
+    const result = await reactivateModerator("target-1");
+
+    expect(result.status).toBe("error");
+    expect(moderatorProfileUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op that never checks the admin count when the profile is already active", async () => {
+    moderatorProfileFindUniqueMock
+      .mockResolvedValueOnce(adminProfile())
+      .mockResolvedValueOnce(adminProfile({ id: "target-1", isActive: true, deactivatedAt: null }));
+
+    const result = await reactivateModerator("target-1");
+
+    expect(result.status).toBe("ok");
+    expect(moderatorProfileUpdateMock).not.toHaveBeenCalled();
+    expect(auditLogEntryCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("reactivates a deactivated profile and logs the prior deactivation timestamp", async () => {
+    const deactivatedAt = new Date("2026-09-01T00:00:00.000Z");
+    moderatorProfileFindUniqueMock
+      .mockResolvedValueOnce(adminProfile())
+      .mockResolvedValueOnce(adminProfile({ id: "target-1", isActive: false, deactivatedAt }));
+
+    const result = await reactivateModerator("target-1");
+
+    expect(result.status).toBe("ok");
+    expect(moderatorProfileUpdateMock).toHaveBeenCalledWith({
+      where: { id: "target-1" },
+      data: { isActive: true, deactivatedAt: null, lastEditedByUserId: "admin-user-1" },
+    });
+    expect(auditLogEntryCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entityType: "moderator_profile",
+        action: "moderator_reactivate",
+        before: { isActive: false, deactivatedAt: deactivatedAt.toISOString() },
+        after: { isActive: true, deactivatedAt: null },
+      }),
+    });
   });
 });

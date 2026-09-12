@@ -5,12 +5,15 @@ import {
   ModerationActionType,
   ModerationReasonCode,
   CorrectionReportStatus,
+  AuditActionType,
 } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 import type { CameraSnapshot, ProposedCameraFields } from "@/lib/correction-diff";
 import { buildCorrectionDiffRows } from "@/lib/correction-diff";
 import type { SensitiveSiteMatchResult, SensitiveSiteCheckError } from "@/lib/sensitive-site-check";
 import { deriveAuState } from "@/lib/au-state";
+import { buildAuditLogEntry, type AuditLogEntryCreateInput } from "@/lib/audit-log-payloads";
+import type { CameraFieldsPayload } from "@/lib/audit-log-payloads";
 
 export type CorrectionDecisionInput = {
   correctionId: string;
@@ -18,7 +21,12 @@ export type CorrectionDecisionInput = {
   actorId: string;
   reasonCode: ModerationReasonCode;
   note: string;
+  /** Pre-generated so the audit entry can reference the ModerationAction row before it's created. */
+  moderationActionId: string;
 };
+
+/** The subset of Camera fields captured in an audit "before"/"after" snapshot, matching the keys `cameraUpdate` may set. */
+type CameraSnapshotForAudit = CameraSnapshot & { stateOverride: boolean };
 
 export type PendingCorrection = ProposedCameraFields & {
   proposedSensitiveSiteMatches: SensitiveSiteMatchResult[] | null;
@@ -26,6 +34,7 @@ export type PendingCorrection = ProposedCameraFields & {
 };
 
 type ModerationActionPlan = {
+  id: string;
   cameraId: string;
   correctionReportId: string;
   actorId: string;
@@ -47,11 +56,16 @@ export type CorrectionApproveTransitionPlan = {
   // the pre-correction ones.
   resultingState: AuState | null;
   resultingType: CameraType;
+  // createdSensitiveSiteMatchIds starts empty; the action file fills it in
+  // after actually creating the SensitiveSiteMatch rows, since their ids
+  // aren't known until then.
+  auditLogEntry: AuditLogEntryCreateInput<"camera_correction_approve">;
 };
 
 export type CorrectionRejectTransitionPlan = {
   correctionUpdate: { status: CorrectionReportStatus; reviewedAt: Date };
   moderationAction: ModerationActionPlan;
+  auditLogEntry: AuditLogEntryCreateInput<"camera_correction_reject">;
 };
 
 function describeChanges(camera: CameraSnapshot, correction: PendingCorrection): string | null {
@@ -60,9 +74,29 @@ function describeChanges(camera: CameraSnapshot, correction: PendingCorrection):
   return rows.map((row) => `${row.label} corrected from "${row.before}" to "${row.after}"`).join("; ");
 }
 
+/**
+ * Picks only the keys `cameraUpdate` actually sets, pairing each with its
+ * pre-change value from `camera`, so the audit "before"/"after" snapshot
+ * never claims a field changed that this correction didn't touch.
+ */
+function pickCameraAuditFields(
+  camera: CameraSnapshotForAudit,
+  cameraUpdate: Prisma.CameraUpdateInput
+): { before: CameraFieldsPayload; after: CameraFieldsPayload } {
+  const cameraRecord = camera as unknown as Record<string, unknown>;
+  const updateRecord = cameraUpdate as unknown as Record<string, unknown>;
+  const before: Record<string, unknown> = {};
+  const after: Record<string, unknown> = {};
+  for (const key of Object.keys(updateRecord)) {
+    before[key] = cameraRecord[key];
+    after[key] = updateRecord[key];
+  }
+  return { before: before as CameraFieldsPayload, after: after as CameraFieldsPayload };
+}
+
 export function buildCorrectionApproveTransition(
   correction: PendingCorrection,
-  camera: CameraSnapshot,
+  camera: CameraSnapshotForAudit,
   input: CorrectionDecisionInput,
   now: Date = new Date()
 ): CorrectionApproveTransitionPlan {
@@ -107,6 +141,8 @@ export function buildCorrectionApproveTransition(
   const resultingState: AuState | null = locationChanged ? derivedState : camera.state;
   const resultingType: CameraType = correction.proposedType ?? camera.type;
 
+  const { before: fieldsBefore, after: fieldsAfter } = pickCameraAuditFields(camera, cameraUpdate);
+
   return {
     cameraUpdate,
     resultingState,
@@ -122,6 +158,7 @@ export function buildCorrectionApproveTransition(
           },
     correctionUpdate: { status: CorrectionReportStatus.approved, reviewedAt: now },
     moderationAction: {
+      id: input.moderationActionId,
       cameraId: input.cameraId,
       correctionReportId: input.correctionId,
       actorId: input.actorId,
@@ -130,6 +167,15 @@ export function buildCorrectionApproveTransition(
       note: input.note,
     },
     newSensitiveSiteMatches,
+    auditLogEntry: buildAuditLogEntry(
+      AuditActionType.camera_correction_approve,
+      input.cameraId,
+      input.actorId,
+      fieldsBefore,
+      { ...fieldsAfter, correctionReportId: input.correctionId, createdSensitiveSiteMatchIds: [] },
+      changeDescription ?? "Approved this correction (no camera fields changed).",
+      input.moderationActionId
+    ),
   };
 }
 
@@ -140,6 +186,7 @@ export function buildCorrectionRejectTransition(
   return {
     correctionUpdate: { status: CorrectionReportStatus.rejected, reviewedAt: now },
     moderationAction: {
+      id: input.moderationActionId,
       cameraId: input.cameraId,
       correctionReportId: input.correctionId,
       actorId: input.actorId,
@@ -147,5 +194,14 @@ export function buildCorrectionRejectTransition(
       reasonCode: input.reasonCode,
       note: input.note,
     },
+    auditLogEntry: buildAuditLogEntry(
+      AuditActionType.camera_correction_reject,
+      input.correctionId,
+      input.actorId,
+      { status: "pending", reviewedAt: null },
+      { status: "rejected", reviewedAt: now.toISOString() },
+      "Rejected this correction.",
+      input.moderationActionId
+    ),
   };
 }

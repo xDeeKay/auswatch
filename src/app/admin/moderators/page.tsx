@@ -53,6 +53,12 @@ export default async function AdminModeratorsPage() {
           >
             Back to review queue
           </Link>
+          <Link
+            href="/admin/audit-log"
+            className="mt-1 block font-mono text-xs text-parchment/50 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
+          >
+            Audit log &rarr;
+          </Link>
         </div>
         <Link
           href="/admin/moderators/new"

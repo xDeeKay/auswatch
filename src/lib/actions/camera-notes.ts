@@ -1,9 +1,12 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
+import { AuditActionType } from "@/generated/prisma/enums";
 import { cameraNoteSchema } from "@/lib/validation/camera-note";
 import { requireModerator, canView, accessDeniedMessage } from "@/lib/moderator-access";
+import { buildAuditLogEntry, toJsonInput } from "@/lib/audit-log-payloads";
 
 export type CameraNoteActionResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -38,9 +41,25 @@ export async function addCameraNote(
       return { status: "error", message: "You do not have permission to view this camera." };
     }
 
-    await prisma.cameraNote.create({
-      data: { cameraId, authorId, body: parsed.data.body },
-    });
+    const noteId = randomUUID();
+    await prisma.$transaction([
+      prisma.cameraNote.create({
+        data: { id: noteId, cameraId, authorId, body: parsed.data.body },
+      }),
+      prisma.auditLogEntry.create({
+        data: {
+          ...buildAuditLogEntry(
+            AuditActionType.camera_note_add,
+            noteId,
+            authorId,
+            null,
+            { cameraId, authorId, body: parsed.data.body },
+            "Added an internal note."
+          ),
+          before: toJsonInput(null),
+        },
+      }),
+    ]);
 
     revalidatePath(`/moderate/cameras/${cameraId}`);
     return { status: "ok" };
