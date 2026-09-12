@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { ModerationState, ModerationReasonCode } from "@/generated/prisma/enums";
@@ -39,7 +40,7 @@ async function applyTransition(
     const outcome = await prisma.$transaction(async (tx) => {
       const camera = await tx.camera.findUnique({
         where: { id: cameraId },
-        select: { state: true, type: true, moderationState: true },
+        select: { state: true, type: true, moderationState: true, status: true },
       });
       if (!camera || camera.moderationState !== ModerationState.pending) {
         return "already-reviewed" as const;
@@ -50,7 +51,15 @@ async function applyTransition(
         return "forbidden" as const;
       }
 
-      const plan = build({ cameraId, actorId, reasonCode, note });
+      const moderationActionId = randomUUID();
+      const plan = build({
+        cameraId,
+        actorId,
+        reasonCode,
+        note,
+        statusBefore: camera.status,
+        moderationActionId,
+      });
 
       const result = await tx.camera.updateMany({
         where: { id: cameraId, moderationState: ModerationState.pending },
@@ -61,6 +70,7 @@ async function applyTransition(
       }
       await tx.historyEvent.create({ data: plan.historyEvent });
       await tx.moderationAction.create({ data: plan.moderationAction });
+      await tx.auditLogEntry.create({ data: plan.auditLogEntry });
       return "ok" as const;
     });
 

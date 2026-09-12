@@ -1,10 +1,24 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { ModeratorRole } from "@/generated/prisma/enums";
-import { requireAdmin, normalizeModeratorEmail, accessDeniedMessage } from "@/lib/moderator-access";
+import {
+  requireAdmin,
+  normalizeModeratorEmail,
+  accessDeniedMessage,
+  countOtherActiveAdmins,
+} from "@/lib/moderator-access";
 import { parseGrantGrid, diffGrants } from "@/lib/moderator-grants";
+import { toJsonInput } from "@/lib/audit-log-payloads";
+import {
+  toGrantCells,
+  buildModeratorCreateAuditEntry,
+  buildModeratorUpdateAuditEntry,
+  buildModeratorDeactivateAuditEntry,
+  buildModeratorReactivateAuditEntry,
+} from "@/lib/moderator-audit";
 
 export type AdminActionResult = { status: "ok" } | { status: "error"; message: string };
 
@@ -12,16 +26,14 @@ function parseRole(value: FormDataEntryValue | null): ModeratorRole {
   return value === ModeratorRole.admin ? ModeratorRole.admin : ModeratorRole.moderator;
 }
 
-async function countOtherActiveAdmins(excludeProfileId: string): Promise<number> {
-  return prisma.moderatorProfile.count({
-    where: { role: ModeratorRole.admin, isActive: true, id: { not: excludeProfileId } },
-  });
-}
-
 export async function createModeratorProfile(formData: FormData): Promise<AdminActionResult> {
   const access = await requireAdmin();
   if (access.status !== "ok") {
     return { status: "error", message: accessDeniedMessage(access) };
+  }
+  const actorId = access.profile.userId;
+  if (!actorId) {
+    return { status: "error", message: "Not authenticated." };
   }
 
   const emailRaw = formData.get("email");
@@ -38,14 +50,21 @@ export async function createModeratorProfile(formData: FormData): Promise<AdminA
       return { status: "error", message: "A moderator profile with this email already exists." };
     }
 
-    await prisma.moderatorProfile.create({
-      data: {
-        email,
-        role,
-        lastEditedByUserId: access.profile.userId,
-        grants: { create: grants },
-      },
-    });
+    const profileId = randomUUID();
+    const auditEntry = buildModeratorCreateAuditEntry(profileId, actorId, email, role, grants);
+
+    await prisma.$transaction([
+      prisma.moderatorProfile.create({
+        data: {
+          id: profileId,
+          email,
+          role,
+          lastEditedByUserId: actorId,
+          grants: { create: grants },
+        },
+      }),
+      prisma.auditLogEntry.create({ data: { ...auditEntry, before: toJsonInput(auditEntry.before) } }),
+    ]);
   } catch {
     return { status: "error", message: "Something went wrong. Please try again." };
   }
@@ -61,6 +80,10 @@ export async function updateModeratorPrivileges(
   const access = await requireAdmin();
   if (access.status !== "ok") {
     return { status: "error", message: accessDeniedMessage(access) };
+  }
+  const actorId = access.profile.userId;
+  if (!actorId) {
+    return { status: "error", message: "Not authenticated." };
   }
 
   const role = parseRole(formData.get("role"));
@@ -87,10 +110,18 @@ export async function updateModeratorPrivileges(
         ? { toCreate: [], toUpdate: [], toDeleteIds: target.grants.map((g) => g.id) }
         : diffGrants(target.grants, desiredGrants);
 
+    const finalGrants = role === ModeratorRole.admin ? [] : desiredGrants;
+    const auditEntry = buildModeratorUpdateAuditEntry(
+      moderatorProfileId,
+      actorId,
+      { role: target.role, grants: toGrantCells(target.grants) },
+      { role, grants: finalGrants }
+    );
+
     await prisma.$transaction([
       prisma.moderatorProfile.update({
         where: { id: moderatorProfileId },
-        data: { role, lastEditedByUserId: access.profile.userId },
+        data: { role, lastEditedByUserId: actorId },
       }),
       ...(diff.toDeleteIds.length > 0
         ? [prisma.moderatorGrant.deleteMany({ where: { id: { in: diff.toDeleteIds } } })]
@@ -101,6 +132,7 @@ export async function updateModeratorPrivileges(
       ...(diff.toCreate.length > 0
         ? [prisma.moderatorGrant.createMany({ data: diff.toCreate.map((g) => ({ ...g, moderatorProfileId })) })]
         : []),
+      prisma.auditLogEntry.create({ data: auditEntry }),
     ]);
   } catch {
     return { status: "error", message: "Something went wrong. Please try again." };
@@ -115,6 +147,10 @@ export async function deactivateModerator(moderatorProfileId: string): Promise<A
   const access = await requireAdmin();
   if (access.status !== "ok") {
     return { status: "error", message: accessDeniedMessage(access) };
+  }
+  const actorId = access.profile.userId;
+  if (!actorId) {
+    return { status: "error", message: "Not authenticated." };
   }
 
   try {
@@ -133,10 +169,16 @@ export async function deactivateModerator(moderatorProfileId: string): Promise<A
       }
     }
 
-    await prisma.moderatorProfile.update({
-      where: { id: moderatorProfileId },
-      data: { isActive: false, deactivatedAt: new Date(), lastEditedByUserId: access.profile.userId },
-    });
+    const deactivatedAt = new Date();
+    await prisma.$transaction([
+      prisma.moderatorProfile.update({
+        where: { id: moderatorProfileId },
+        data: { isActive: false, deactivatedAt, lastEditedByUserId: actorId },
+      }),
+      prisma.auditLogEntry.create({
+        data: buildModeratorDeactivateAuditEntry(moderatorProfileId, actorId, deactivatedAt),
+      }),
+    ]);
   } catch {
     return { status: "error", message: "Something went wrong. Please try again." };
   }
@@ -150,17 +192,29 @@ export async function reactivateModerator(moderatorProfileId: string): Promise<A
   if (access.status !== "ok") {
     return { status: "error", message: accessDeniedMessage(access) };
   }
+  const actorId = access.profile.userId;
+  if (!actorId) {
+    return { status: "error", message: "Not authenticated." };
+  }
 
   try {
     const target = await prisma.moderatorProfile.findUnique({ where: { id: moderatorProfileId } });
     if (!target) {
       return { status: "error", message: "This moderator profile no longer exists." };
     }
+    if (target.isActive) {
+      return { status: "ok" };
+    }
 
-    await prisma.moderatorProfile.update({
-      where: { id: moderatorProfileId },
-      data: { isActive: true, deactivatedAt: null, lastEditedByUserId: access.profile.userId },
-    });
+    await prisma.$transaction([
+      prisma.moderatorProfile.update({
+        where: { id: moderatorProfileId },
+        data: { isActive: true, deactivatedAt: null, lastEditedByUserId: actorId },
+      }),
+      prisma.auditLogEntry.create({
+        data: buildModeratorReactivateAuditEntry(moderatorProfileId, actorId, target.deactivatedAt),
+      }),
+    ]);
   } catch {
     return { status: "error", message: "Something went wrong. Please try again." };
   }

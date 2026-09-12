@@ -51,6 +51,13 @@ export async function getModeratorProfile(): Promise<ModeratorProfileWithGrants 
   return result.status === "ok" ? result.profile : null;
 }
 
+/** How many *other* active admins exist besides the given profile, for the last-active-admin safeguard. */
+export async function countOtherActiveAdmins(excludeProfileId: string): Promise<number> {
+  return prisma.moderatorProfile.count({
+    where: { role: ModeratorRole.admin, isActive: true, id: { not: excludeProfileId } },
+  });
+}
+
 export function accessDeniedMessage(access: { status: "unauthenticated" | "forbidden" }): string {
   return access.status === "unauthenticated"
     ? "Not authenticated."

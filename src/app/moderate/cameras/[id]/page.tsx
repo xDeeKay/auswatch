@@ -1,21 +1,32 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { CorrectionReportStatus, ModerationReasonCode } from "@/generated/prisma/enums";
+import { AuditEntityType, CorrectionReportStatus, ModerationReasonCode, ModeratorRole } from "@/generated/prisma/enums";
 import { TYPE_LABEL, CAPTURE_LABEL, STATUS_LABEL, HISTORY_EVENT_LABEL } from "@/lib/camera-labels";
 import { REASON_CODE_LABEL, ACTION_TYPE_LABEL, MODERATION_STATE_LABEL } from "@/lib/moderation-labels";
 import { buildCorrectionDiffRows } from "@/lib/correction-diff";
 import { approveCorrection, rejectCorrection } from "@/lib/actions/corrections";
 import { addCameraNote } from "@/lib/actions/camera-notes";
 import { overrideCameraState } from "@/lib/actions/camera-state";
+import { revertAuditLogEntry } from "@/lib/actions/audit-log";
 import { requireModerator, canView, canAct } from "@/lib/moderator-access";
 import { AuState } from "@/generated/prisma/enums";
 import { STATE_LABEL } from "@/lib/au-state-labels";
+import { AUDIT_ACTION_LABEL } from "@/lib/audit-labels";
+import { formatAuditPayload } from "@/lib/audit-log-format";
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
   month: "short",
   day: "numeric",
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-AU", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
 });
 
 const selectClass =
@@ -59,12 +70,12 @@ export default async function CameraDetailPage({
     where: { id },
     include: {
       history: { orderBy: { date: "desc" } },
-      moderationActions: { include: { actor: true }, orderBy: { createdAt: "desc" } },
+      moderationActions: { include: { actor: true, auditLogEntry: true }, orderBy: { createdAt: "desc" } },
       correctionReports: {
         where: { status: CorrectionReportStatus.pending },
         orderBy: { createdAt: "asc" },
       },
-      internalNotes: { include: { author: true }, orderBy: { createdAt: "desc" } },
+      internalNotes: { where: { deletedAt: null }, include: { author: true }, orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -73,6 +84,23 @@ export default async function CameraDetailPage({
   }
 
   const canActOnCamera = canAct(profile, { state: camera.state, type: camera.type });
+  const isAdmin = profile.role === ModeratorRole.admin;
+
+  const [allCorrectionIds, allNoteIds] = await Promise.all([
+    prisma.correctionReport.findMany({ where: { cameraId: id }, select: { id: true } }),
+    prisma.cameraNote.findMany({ where: { cameraId: id }, select: { id: true } }),
+  ]);
+  const auditLog = await prisma.auditLogEntry.findMany({
+    where: {
+      OR: [
+        { entityType: AuditEntityType.camera, entityId: id },
+        { entityType: AuditEntityType.correction_report, entityId: { in: allCorrectionIds.map((c) => c.id) } },
+        { entityType: AuditEntityType.camera_note, entityId: { in: allNoteIds.map((n) => n.id) } },
+      ],
+    },
+    include: { actor: true, revertedBy: true },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
@@ -295,10 +323,61 @@ export default async function CameraDetailPage({
               <p className="font-mono text-xs text-parchment/50">
                 {dateFormatter.format(action.createdAt)} - {ACTION_TYPE_LABEL[action.action]} by{" "}
                 {action.actor.name ?? action.actor.email ?? "Unknown moderator"} ({REASON_CODE_LABEL[action.reasonCode]})
+                {action.auditLogEntry?.revertedAt && (
+                  <span className="ml-2 rounded border border-error/40 px-1.5 py-0.5 text-error">REVERTED</span>
+                )}
               </p>
               {action.note && <p className="mt-1 text-parchment/85">{action.note}</p>}
             </li>
           ))}
+        </ol>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-heading text-base text-parchment">Audit log</h2>
+        <p className="text-xs text-parchment/50">
+          Every edit to this record, with before/after values.{" "}
+          {isAdmin ? "Admins can revert any unreverted entry." : "Admins can revert entries here if needed."}
+        </p>
+        {auditLog.length === 0 && <p className="text-sm text-parchment/50">No audit entries yet.</p>}
+        <ol className="flex flex-col gap-2">
+          {auditLog.map((entry) => {
+            const afterRows = formatAuditPayload(entry.after);
+            return (
+              <li key={entry.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-mono text-xs text-parchment/50">
+                    {dateTimeFormatter.format(entry.createdAt)} - {AUDIT_ACTION_LABEL[entry.action]} by{" "}
+                    {entry.actor.name ?? entry.actor.email ?? "Unknown"}
+                    {entry.revertedAt && (
+                      <span className="ml-2 rounded border border-error/40 px-1.5 py-0.5 text-error">REVERTED</span>
+                    )}
+                  </p>
+                  {isAdmin && entry.revertedAt === null && (
+                    <form
+                      action={async () => {
+                        "use server";
+                        await revertAuditLogEntry(entry.id);
+                      }}
+                    >
+                      <button
+                        type="submit"
+                        className="rounded border border-error bg-error/10 px-2 py-1 font-mono text-xs text-error transition hover:bg-error/20"
+                      >
+                        Revert
+                      </button>
+                    </form>
+                  )}
+                </div>
+                {entry.summary && <p className="mt-1 text-parchment/85">{entry.summary}</p>}
+                {afterRows.length > 0 && (
+                  <p className="mt-1 font-mono text-xs text-parchment/50">
+                    {afterRows.map((row) => `${row.label}: ${row.text}`).join(" - ")}
+                  </p>
+                )}
+              </li>
+            );
+          })}
         </ol>
       </section>
 

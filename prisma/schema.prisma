@@ -101,6 +101,26 @@ enum ModeratorRole {
   admin
 }
 
+enum AuditEntityType {
+  camera
+  correction_report
+  camera_note
+  moderator_profile
+}
+
+enum AuditActionType {
+  camera_verify
+  camera_remove
+  camera_correction_approve
+  camera_correction_reject
+  camera_state_override
+  camera_note_add
+  moderator_create
+  moderator_update
+  moderator_deactivate
+  moderator_reactivate
+}
+
 model Camera {
   id                   String               @id @default(cuid())
   lat                  Float
@@ -199,13 +219,14 @@ model CorrectionReport {
 }
 
 model CameraNote {
-  id        String   @id @default(cuid())
-  camera    Camera   @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  camera    Camera    @relation(fields: [cameraId], references: [id], onDelete: Cascade)
   cameraId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
   authorId  String
   body      String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
 
   @@index([cameraId, createdAt])
 }
@@ -233,6 +254,8 @@ model User {
   cameraNotes             CameraNote[]
   moderatorProfile        ModeratorProfile?
   moderatorProfilesEdited ModeratorProfile[] @relation("ModeratorProfileEditedBy")
+  auditLogEntries         AuditLogEntry[]    @relation("AuditLogActor")
+  auditLogEntriesReverted AuditLogEntry[]    @relation("AuditLogRevertedBy")
 }
 
 model Account {
@@ -281,6 +304,7 @@ model ModerationAction {
   createdAt          DateTime             @default(now())
   correctionReport   CorrectionReport?    @relation(fields: [correctionReportId], references: [id], onDelete: SetNull)
   correctionReportId String?
+  auditLogEntry      AuditLogEntry?
 
   @@index([cameraId])
   @@index([actorId])
@@ -318,4 +342,32 @@ model ModeratorGrant {
 
   @@unique([moderatorProfileId, state, cameraType])
   @@index([moderatorProfileId])
+}
+
+model AuditLogEntry {
+  id         String          @id @default(cuid())
+  entityType AuditEntityType
+  entityId   String
+  action     AuditActionType
+  actor      User            @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: Restrict)
+  actorId    String
+  before     Json?
+  after      Json?
+  summary    String          @default("")
+  createdAt  DateTime        @default(now())
+
+  moderationAction   ModerationAction? @relation(fields: [moderationActionId], references: [id], onDelete: SetNull)
+  moderationActionId String?           @unique
+
+  revertsEntry    AuditLogEntry? @relation("AuditLogRevert", fields: [revertsEntryId], references: [id], onDelete: SetNull)
+  revertsEntryId  String?        @unique
+  revertedByEntry AuditLogEntry? @relation("AuditLogRevert")
+
+  revertedAt       DateTime?
+  revertedByUserId String?
+  revertedBy       User?     @relation("AuditLogRevertedBy", fields: [revertedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId])
+  @@index([revertedAt])
 }
