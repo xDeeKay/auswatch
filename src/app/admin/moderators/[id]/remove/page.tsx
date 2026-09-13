@@ -16,7 +16,6 @@ export default async function RemoveModeratorPage({ params }: { params: Promise<
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 py-10 text-center">
-      <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
       <h1 className="font-heading text-lg text-parchment">Remove {moderator.user?.name ?? moderator.email}?</h1>
       <p className="text-sm text-parchment/70">
         This revokes their sign-in and every privilege, but keeps their moderation history intact. It can be
