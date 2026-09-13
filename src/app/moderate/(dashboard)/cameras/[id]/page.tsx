@@ -1,10 +1,23 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { AuditEntityType, CorrectionReportStatus, ModerationReasonCode, ModeratorRole } from "@/generated/prisma/enums";
+import {
+  AuditEntityType,
+  CorrectionReportStatus,
+  ModerationReasonCode,
+  ModerationState,
+  ModeratorRole,
+  SensitiveSiteMatchSource,
+} from "@/generated/prisma/enums";
 import { TYPE_LABEL, CAPTURE_LABEL, STATUS_LABEL, HISTORY_EVENT_LABEL } from "@/lib/camera-labels";
-import { REASON_CODE_LABEL, ACTION_TYPE_LABEL, MODERATION_STATE_LABEL } from "@/lib/moderation-labels";
+import {
+  REASON_CODE_LABEL,
+  ACTION_TYPE_LABEL,
+  MODERATION_STATE_LABEL,
+  MATCH_SOURCE_LABEL,
+  ZONE_CATEGORY_LABEL,
+} from "@/lib/moderation-labels";
 import { buildCorrectionDiffRows } from "@/lib/correction-diff";
+import { verifyCamera, removeCamera } from "@/lib/actions/moderation";
 import { approveCorrection, rejectCorrection } from "@/lib/actions/corrections";
 import { addCameraNote } from "@/lib/actions/camera-notes";
 import { overrideCameraState } from "@/lib/actions/camera-state";
@@ -14,6 +27,12 @@ import { AuState } from "@/generated/prisma/enums";
 import { STATE_LABEL } from "@/lib/au-state-labels";
 import { AUDIT_ACTION_LABEL } from "@/lib/audit-labels";
 import { formatAuditPayload } from "@/lib/audit-log-format";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Label, Select, TextArea } from "@/components/ui/Field";
+import { DiffTable } from "@/components/ui/DiffTable";
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -29,11 +48,6 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-AU", {
   minute: "2-digit",
 });
 
-const selectClass =
-  "w-full rounded border border-parchment/20 bg-transparent px-2 py-1.5 text-sm text-parchment focus:border-amber focus:outline-none";
-const noteClass =
-  "w-full rounded border border-parchment/20 bg-transparent px-2 py-1.5 text-sm text-parchment placeholder:text-parchment/30 focus:border-amber focus:outline-none";
-
 export default async function CameraDetailPage({
   params,
 }: {
@@ -41,29 +55,7 @@ export default async function CameraDetailPage({
 }) {
   const { id } = await params;
   const access = await requireModerator();
-
-  if (access.status !== "ok") {
-    return (
-      <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-6 py-20 text-center">
-        <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
-        <h1 className="font-heading text-lg text-parchment">
-          {access.status === "unauthenticated" ? "Moderator sign in required" : "Access revoked"}
-        </h1>
-        {access.status === "forbidden" && (
-          <p className="text-sm text-parchment/70">
-            Your moderator access has been revoked or is no longer active.
-          </p>
-        )}
-        <a
-          href="/moderate/sign-in"
-          className="rounded border border-amber bg-amber/10 px-4 py-2 font-mono text-sm text-amber transition hover:bg-amber/20"
-        >
-          Go to sign in
-        </a>
-      </main>
-    );
-  }
-
+  if (access.status !== "ok") return null;
   const { profile } = access;
 
   const camera = await prisma.camera.findUnique({
@@ -76,6 +68,7 @@ export default async function CameraDetailPage({
         orderBy: { createdAt: "asc" },
       },
       internalNotes: { where: { deletedAt: null }, include: { author: true }, orderBy: { createdAt: "desc" } },
+      sensitiveSiteMatches: true,
     },
   });
 
@@ -85,6 +78,7 @@ export default async function CameraDetailPage({
 
   const canActOnCamera = canAct(profile, { state: camera.state, type: camera.type });
   const isAdmin = profile.role === ModeratorRole.admin;
+  const isPending = camera.moderationState === ModerationState.pending;
 
   const [allCorrectionIds, allNoteIds] = await Promise.all([
     prisma.correctionReport.findMany({ where: { cameraId: id }, select: { id: true } }),
@@ -103,17 +97,13 @@ export default async function CameraDetailPage({
   });
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
-      <header>
-        <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
-        <h1 className="font-heading text-lg text-parchment">{TYPE_LABEL[camera.type]}</h1>
-        <Link
-          href="/moderate"
-          className="mt-1 inline-block font-mono text-xs text-parchment/50 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
-        >
-          Back to review queue
-        </Link>
-      </header>
+    <>
+      <PageHeader
+        title={TYPE_LABEL[camera.type]}
+        description={
+          isPending ? <Badge tone="amber">NEW SUBMISSION</Badge> : <Badge tone="neutral">{MODERATION_STATE_LABEL[camera.moderationState]}</Badge>
+        }
+      />
 
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <div>
@@ -159,6 +149,88 @@ export default async function CameraDetailPage({
         )}
       </dl>
 
+      {camera.sensitiveSiteMatches.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {camera.sensitiveSiteMatches.map((match) =>
+            match.source === SensitiveSiteMatchSource.check_error ? (
+              <div key={match.id} className="rounded border border-error/50 bg-error/10 px-3 py-2 text-sm">
+                <p className="font-mono text-xs tracking-[0.05em] text-error">AUTOMATED CHECK FAILED</p>
+                <p className="mt-1 text-parchment/80">Manual review required. {match.detail}</p>
+              </div>
+            ) : (
+              <div key={match.id} className="rounded border border-amber/40 bg-amber/5 px-3 py-2 text-sm">
+                <p className="font-mono text-xs tracking-[0.05em] text-amber">
+                  {MATCH_SOURCE_LABEL[match.source]}
+                  {match.category ? ` - ${ZONE_CATEGORY_LABEL[match.category]}` : ""}
+                </p>
+                {match.distanceMeters !== null && (
+                  <p className="mt-1 font-mono text-parchment/80">{Math.round(match.distanceMeters)}m away</p>
+                )}
+              </div>
+            )
+          )}
+        </div>
+      )}
+
+      {isPending && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-base text-parchment">Decision</h2>
+          {canActOnCamera ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <form
+                action={async (formData: FormData) => {
+                  "use server";
+                  await verifyCamera(camera.id, formData);
+                }}
+                className="flex flex-col gap-2"
+              >
+                <Select name="reasonCode" defaultValue="" required>
+                  <option value="" disabled>
+                    Reason for verifying
+                  </option>
+                  {Object.values(ModerationReasonCode).map((code) => (
+                    <option key={code} value={code}>
+                      {REASON_CODE_LABEL[code]}
+                    </option>
+                  ))}
+                </Select>
+                <TextArea name="note" placeholder="Optional note" rows={2} />
+                <Button type="submit" tone="primary">
+                  Verify
+                </Button>
+              </form>
+
+              <form
+                action={async (formData: FormData) => {
+                  "use server";
+                  await removeCamera(camera.id, formData);
+                }}
+                className="flex flex-col gap-2"
+              >
+                <Select name="reasonCode" defaultValue="" required>
+                  <option value="" disabled>
+                    Reason for removing
+                  </option>
+                  {Object.values(ModerationReasonCode).map((code) => (
+                    <option key={code} value={code}>
+                      {REASON_CODE_LABEL[code]}
+                    </option>
+                  ))}
+                </Select>
+                <TextArea name="note" placeholder="Optional note" rows={2} />
+                <Button type="submit" tone="destructive">
+                  Remove
+                </Button>
+              </form>
+            </div>
+          ) : (
+            <p className="font-mono text-xs text-parchment/50">
+              View only. You don&rsquo;t have permission to act on this ticket.
+            </p>
+          )}
+        </section>
+      )}
+
       {canActOnCamera && (
         <section className="flex flex-col gap-2 rounded border border-parchment/10 p-4">
           <h2 className="font-mono text-xs tracking-[0.05em] text-amber">CORRECT STATE</h2>
@@ -173,24 +245,15 @@ export default async function CameraDetailPage({
             }}
             className="flex flex-wrap items-center gap-2"
           >
-            <select
-              name="state"
-              defaultValue={camera.state ?? ""}
-              className={`${selectClass} w-auto`}
-            >
+            <Select name="state" defaultValue={camera.state ?? ""} className="w-auto">
               <option value="">Unresolved</option>
               {Object.values(AuState).map((state) => (
                 <option key={state} value={state}>
                   {STATE_LABEL[state]}
                 </option>
               ))}
-            </select>
-            <button
-              type="submit"
-              className="rounded border border-amber bg-amber/10 px-3 py-1.5 font-mono text-sm text-amber transition hover:bg-amber/20"
-            >
-              Set state
-            </button>
+            </Select>
+            <Button type="submit">Set state</Button>
           </form>
         </section>
       )}
@@ -201,9 +264,14 @@ export default async function CameraDetailPage({
             Pending corrections ({camera.correctionReports.length})
           </h2>
           {camera.correctionReports.map((correction) => {
-            const diffRows = buildCorrectionDiffRows(camera, correction);
+            const diffRows = buildCorrectionDiffRows(camera, correction).map((row) => ({
+              key: row.field,
+              label: row.label,
+              before: row.before,
+              after: row.after,
+            }));
             return (
-              <div key={correction.id} className="rounded border border-parchment/20 p-5">
+              <Card key={correction.id}>
                 <p className="font-mono text-xs text-parchment/50">
                   Submitted {dateFormatter.format(correction.createdAt)}
                 </p>
@@ -211,24 +279,7 @@ export default async function CameraDetailPage({
                   <p className="mt-2 text-sm text-parchment/85">&ldquo;{correction.reporterNote}&rdquo;</p>
                 )}
 
-                <table className="mt-4 w-full text-sm">
-                  <thead>
-                    <tr className="text-left font-mono text-xs tracking-[0.05em] text-amber">
-                      <th className="pb-1 pr-4">FIELD</th>
-                      <th className="pb-1 pr-4">CURRENT</th>
-                      <th className="pb-1">PROPOSED</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {diffRows.map((row) => (
-                      <tr key={row.field} className="border-t border-parchment/10">
-                        <td className="py-1.5 pr-4 text-parchment/70">{row.label}</td>
-                        <td className="py-1.5 pr-4 text-parchment/85">{row.before}</td>
-                        <td className="py-1.5 text-amber">{row.after}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DiffTable rows={diffRows} beforeLabel="CURRENT" afterLabel="PROPOSED" />
 
                 {canActOnCamera ? (
                   <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -239,7 +290,7 @@ export default async function CameraDetailPage({
                       }}
                       className="flex flex-col gap-2"
                     >
-                      <select name="reasonCode" className={selectClass} defaultValue="" required>
+                      <Select name="reasonCode" defaultValue="" required>
                         <option value="" disabled>
                           Reason for approving
                         </option>
@@ -248,14 +299,11 @@ export default async function CameraDetailPage({
                             {REASON_CODE_LABEL[code]}
                           </option>
                         ))}
-                      </select>
-                      <textarea name="note" className={noteClass} placeholder="Optional note" rows={2} />
-                      <button
-                        type="submit"
-                        className="rounded border border-amber bg-amber/10 px-3 py-1.5 font-mono text-sm text-amber transition hover:bg-amber/20"
-                      >
+                      </Select>
+                      <TextArea name="note" placeholder="Optional note" rows={2} />
+                      <Button type="submit" tone="primary">
                         Approve
-                      </button>
+                      </Button>
                     </form>
 
                     <form
@@ -265,7 +313,7 @@ export default async function CameraDetailPage({
                       }}
                       className="flex flex-col gap-2"
                     >
-                      <select name="reasonCode" className={selectClass} defaultValue="" required>
+                      <Select name="reasonCode" defaultValue="" required>
                         <option value="" disabled>
                           Reason for rejecting
                         </option>
@@ -274,14 +322,11 @@ export default async function CameraDetailPage({
                             {REASON_CODE_LABEL[code]}
                           </option>
                         ))}
-                      </select>
-                      <textarea name="note" className={noteClass} placeholder="Optional note" rows={2} />
-                      <button
-                        type="submit"
-                        className="rounded border border-error bg-error/10 px-3 py-1.5 font-mono text-sm text-error transition hover:bg-error/20"
-                      >
+                      </Select>
+                      <TextArea name="note" placeholder="Optional note" rows={2} />
+                      <Button type="submit" tone="destructive">
                         Reject
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 ) : (
@@ -289,7 +334,7 @@ export default async function CameraDetailPage({
                     View only. You don&rsquo;t have permission to act on this ticket.
                   </p>
                 )}
-              </div>
+              </Card>
             );
           })}
         </section>
@@ -324,7 +369,9 @@ export default async function CameraDetailPage({
                 {dateFormatter.format(action.createdAt)} - {ACTION_TYPE_LABEL[action.action]} by{" "}
                 {action.actor.name ?? action.actor.email ?? "Unknown moderator"} ({REASON_CODE_LABEL[action.reasonCode]})
                 {action.auditLogEntry?.revertedAt && (
-                  <span className="ml-2 rounded border border-error/40 px-1.5 py-0.5 text-error">REVERTED</span>
+                  <Badge tone="error" className="ml-2">
+                    REVERTED
+                  </Badge>
                 )}
               </p>
               {action.note && <p className="mt-1 text-parchment/85">{action.note}</p>}
@@ -350,7 +397,9 @@ export default async function CameraDetailPage({
                     {dateTimeFormatter.format(entry.createdAt)} - {AUDIT_ACTION_LABEL[entry.action]} by{" "}
                     {entry.actor.name ?? entry.actor.email ?? "Unknown"}
                     {entry.revertedAt && (
-                      <span className="ml-2 rounded border border-error/40 px-1.5 py-0.5 text-error">REVERTED</span>
+                      <Badge tone="error" className="ml-2">
+                        REVERTED
+                      </Badge>
                     )}
                   </p>
                   {isAdmin && entry.revertedAt === null && (
@@ -360,12 +409,9 @@ export default async function CameraDetailPage({
                         await revertAuditLogEntry(entry.id);
                       }}
                     >
-                      <button
-                        type="submit"
-                        className="rounded border border-error bg-error/10 px-2 py-1 font-mono text-xs text-error transition hover:bg-error/20"
-                      >
+                      <Button type="submit" tone="destructive" size="xs">
                         Revert
-                      </button>
+                      </Button>
                     </form>
                   )}
                 </div>
@@ -407,22 +453,18 @@ export default async function CameraDetailPage({
           }}
           className="flex flex-col gap-2"
         >
-          <textarea
+          <TextArea
             name="body"
-            className={noteClass}
             placeholder="Add an internal note (visible to moderators only)"
             rows={3}
             maxLength={4000}
             required
           />
-          <button
-            type="submit"
-            className="self-start rounded border border-amber bg-amber/10 px-3 py-1.5 font-mono text-sm text-amber transition hover:bg-amber/20"
-          >
+          <Button type="submit" className="self-start">
             Add note
-          </button>
+          </Button>
         </form>
       </section>
-    </main>
+    </>
   );
 }

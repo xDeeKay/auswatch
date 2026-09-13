@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import type { ModeratorProfileModel, ModeratorGrantModel } from "@/generated/prisma/models";
@@ -26,7 +27,7 @@ async function getSessionUserId(): Promise<string | null> {
  * cached on the session, so a deactivation or grant edit takes effect on the
  * caller's very next request rather than after they sign out.
  */
-export async function requireModerator(): Promise<ModeratorAccessResult> {
+export const requireModerator = cache(async (): Promise<ModeratorAccessResult> => {
   const userId = await getSessionUserId();
   if (!userId) return { status: "unauthenticated" };
 
@@ -37,14 +38,14 @@ export async function requireModerator(): Promise<ModeratorAccessResult> {
 
   if (!profile || !profile.isActive) return { status: "forbidden" };
   return { status: "ok", profile };
-}
+});
 
-export async function requireAdmin(): Promise<ModeratorAccessResult> {
+export const requireAdmin = cache(async (): Promise<ModeratorAccessResult> => {
   const result = await requireModerator();
   if (result.status !== "ok") return result;
   if (result.profile.role !== ModeratorRole.admin) return { status: "forbidden" };
   return result;
-}
+});
 
 export async function getModeratorProfile(): Promise<ModeratorProfileWithGrants | null> {
   const result = await requireModerator();
