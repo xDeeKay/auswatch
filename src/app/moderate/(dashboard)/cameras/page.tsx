@@ -4,6 +4,9 @@ import { ModerationState } from "@/generated/prisma/enums";
 import { TYPE_LABEL } from "@/lib/camera-labels";
 import { MODERATION_STATE_LABEL } from "@/lib/moderation-labels";
 import { requireModerator, canView } from "@/lib/moderator-access";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TextInput } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
 
 const CAMERA_LIST_LIMIT = 100;
 
@@ -19,29 +22,7 @@ export default async function ModerateCamerasPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const access = await requireModerator();
-
-  if (access.status !== "ok") {
-    return (
-      <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-6 py-20 text-center">
-        <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
-        <h1 className="font-heading text-lg text-parchment">
-          {access.status === "unauthenticated" ? "Moderator sign in required" : "Access revoked"}
-        </h1>
-        {access.status === "forbidden" && (
-          <p className="text-sm text-parchment/70">
-            Your moderator access has been revoked or is no longer active.
-          </p>
-        )}
-        <a
-          href="/moderate/sign-in"
-          className="rounded border border-amber bg-amber/10 px-4 py-2 font-mono text-sm text-amber transition hover:bg-amber/20"
-        >
-          Go to sign in
-        </a>
-      </main>
-    );
-  }
-
+  if (access.status !== "ok") return null;
   const { profile } = access;
 
   const { q } = await searchParams;
@@ -68,35 +49,12 @@ export default async function ModerateCamerasPage({
   );
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-10">
-      <header>
-        <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
-        <h1 className="font-heading text-lg text-parchment">Cameras</h1>
-        <p className="mt-2 text-sm text-parchment/70">
-          Browse live cameras to leave a moderator note or review their record.
-        </p>
-        <Link
-          href="/moderate"
-          className="mt-1 inline-block font-mono text-xs text-parchment/50 underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
-        >
-          Back to review queue
-        </Link>
-      </header>
+    <>
+      <PageHeader title="Cameras" description="Browse live cameras to leave a moderator note or review their record." />
 
       <form method="get" className="flex gap-2">
-        <input
-          type="text"
-          name="q"
-          defaultValue={query}
-          placeholder="Search by operator or notes"
-          className="w-full rounded border border-parchment/20 bg-transparent px-3 py-2 text-sm text-parchment placeholder:text-parchment/30 focus:border-amber focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="rounded border border-amber bg-amber/10 px-4 py-2 font-mono text-sm text-amber transition hover:bg-amber/20"
-        >
-          Search
-        </button>
+        <TextInput type="text" name="q" defaultValue={query} placeholder="Search by operator or notes" />
+        <Button type="submit">Search</Button>
       </form>
 
       <div className="flex flex-col gap-3">
@@ -123,6 +81,6 @@ export default async function ModerateCamerasPage({
           </p>
         )}
       </div>
-    </main>
+    </>
   );
 }

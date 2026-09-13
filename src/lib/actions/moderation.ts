@@ -82,6 +82,7 @@ async function applyTransition(
     }
 
     revalidatePath("/moderate");
+    revalidatePath(`/moderate/cameras/${cameraId}`);
     return { status: "ok" };
   } catch {
     return { status: "error", message: "Something went wrong. Please try again." };
