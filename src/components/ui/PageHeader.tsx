@@ -12,7 +12,6 @@ export function PageHeader({
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
         <h1 className="font-heading text-lg text-parchment">{title}</h1>
         {description && <div className="mt-2 text-sm text-parchment/70">{description}</div>}
       </div>
