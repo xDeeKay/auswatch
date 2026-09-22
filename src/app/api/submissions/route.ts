@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { HistoryEventType } from "@/generated/prisma/enums";
@@ -8,6 +9,8 @@ import { checkSubmissionRateLimit } from "@/lib/rate-limit";
 import { logVelocitySignal } from "@/lib/velocity-log";
 import { checkSensitiveSite } from "@/lib/sensitive-site-check";
 import { requireEnvNumber } from "@/lib/required-env";
+import { collectAndProcessPhotos } from "@/lib/photo-upload";
+import { uploadPhoto, buildCameraPhotoKey } from "@/lib/photo-storage";
 
 const GENERIC_ACCEPTED_BODY = {
   status: "received",
@@ -39,7 +42,9 @@ export async function POST(request: Request) {
       return acceptedResponse(currentToken);
     }
 
-    const body = await request.json().catch(() => null);
+    const form = await request.formData().catch(() => null);
+    const rawPayload = form?.get("payload");
+    const body = typeof rawPayload === "string" ? JSON.parse(rawPayload) : null;
     const parsed = submissionSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -48,17 +53,34 @@ export async function POST(request: Request) {
       );
     }
 
+    const submittedAt = new Date();
+    const photoResult = form
+      ? await collectAndProcessPhotos(form, { lat: parsed.data.lat, lng: parsed.data.lng }, submittedAt)
+      : { ok: true as const, photos: [] };
+    if (!photoResult.ok) {
+      return NextResponse.json(
+        { status: "invalid", errors: { photos: [photoResult.message] } },
+        { status: 400, headers: { "Set-Cookie": reporterIdentityCookieHeader(currentToken) } }
+      );
+    }
+
     const siteCheck = await checkSensitiveSite({ lat: parsed.data.lat, lng: parsed.data.lng });
+
+    const cameraId = randomUUID();
+    const photoIds = photoResult.photos.map(() => randomUUID());
+    for (const [i, photo] of photoResult.photos.entries()) {
+      await uploadPhoto(buildCameraPhotoKey(cameraId, photoIds[i]!), photo.data, photo.contentType);
+    }
 
     await prisma.$transaction(async (tx) => {
       const camera = await tx.camera.create({
-        data: buildCameraCreateData(parsed.data, currentToken),
+        data: { id: cameraId, ...buildCameraCreateData(parsed.data, currentToken) },
       });
 
       await tx.historyEvent.create({
         data: {
           cameraId: camera.id,
-          date: new Date(),
+          date: submittedAt,
           eventType: HistoryEventType.sighted,
           note: "",
         },
@@ -73,6 +95,8 @@ export async function POST(request: Request) {
               category: m.category,
               zoneId: m.zoneId,
               distanceMeters: m.distanceMeters,
+              lat: m.lat,
+              lng: m.lng,
               detail: m.detail,
             })),
             ...siteCheck.checkErrors.map((e) => ({
@@ -81,6 +105,22 @@ export async function POST(request: Request) {
               detail: e.message,
             })),
           ],
+        });
+      }
+
+      if (photoResult.photos.length > 0) {
+        await tx.cameraPhoto.createMany({
+          data: photoResult.photos.map((photo, i) => ({
+            id: photoIds[i]!,
+            cameraId: camera.id,
+            storageKey: buildCameraPhotoKey(camera.id, photoIds[i]!),
+            contentType: photo.contentType,
+            sizeBytes: photo.data.byteLength,
+            width: photo.width,
+            height: photo.height,
+            gpsDistanceMeters: photo.gpsDistanceMeters,
+            capturedAgeHours: photo.capturedAgeHours,
+          })),
         });
       }
 

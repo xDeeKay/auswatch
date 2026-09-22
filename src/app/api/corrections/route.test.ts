@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CameraType, CaptureType, ModerationState } from "@/generated/prisma/enums";
+import { CameraStatus, CameraType, CaptureType, ModerationState, OperatorCategory } from "@/generated/prisma/enums";
 
 const cameraFindUniqueMock = vi.fn();
 const correctionReportCountMock = vi.fn();
@@ -38,9 +38,11 @@ const camera = {
   lat: -31.9505,
   lng: 115.8605,
   type: CameraType.alpr,
+  operatorCategory: OperatorCategory.state_police,
   operator: "WA Police",
   captures: CaptureType.plates,
   notes: "Mounted on a light pole.",
+  status: CameraStatus.active,
   moderationState: ModerationState.verified,
 };
 
@@ -50,6 +52,7 @@ function validBody(overrides: Record<string, unknown> = {}) {
     lat: camera.lat,
     lng: camera.lng,
     type: camera.type,
+    operatorCategory: camera.operatorCategory,
     operator: camera.operator,
     captures: camera.captures,
     notes: camera.notes,
@@ -59,11 +62,9 @@ function validBody(overrides: Record<string, unknown> = {}) {
 }
 
 function postRequest(body: unknown) {
-  return new Request("http://localhost/api/corrections", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const formData = new FormData();
+  formData.set("payload", JSON.stringify(body));
+  return new Request("http://localhost/api/corrections", { method: "POST", body: formData });
 }
 
 describe("POST /api/corrections anti-enumeration", () => {
@@ -185,5 +186,26 @@ describe("POST /api/corrections anti-enumeration", () => {
       message: "Thanks, your correction has been received and is under review.",
     });
     expect(correctionReportCreateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a correction reporting removal even when no other field changed", async () => {
+    const res = await POST(postRequest(validBody({ reportedRemoved: true })));
+
+    expect(res.status).toBe(200);
+    expect(correctionReportCreateMock).toHaveBeenCalledTimes(1);
+    expect(correctionReportCreateMock.mock.calls[0][0].data).toMatchObject({ reportedRemoved: true });
+  });
+
+  it("ignores a removal report for a camera that's already removed", async () => {
+    cameraFindUniqueMock.mockResolvedValue({ ...camera, status: CameraStatus.removed });
+
+    const res = await POST(postRequest(validBody({ reportedRemoved: true })));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      status: "received",
+      message: "Thanks, your correction has been received and is under review.",
+    });
+    expect(correctionReportCreateMock).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { ModerationState, CorrectionReportStatus } from "@/generated/prisma/enums";
+import { CameraStatus, ModerationState, CorrectionReportStatus } from "@/generated/prisma/enums";
 import { correctionSchema } from "@/lib/validation/correction";
 import { buildCameraDiff } from "@/lib/correction-diff";
 import { getOrCreateReporterIdentity, reporterIdentityCookieHeader } from "@/lib/reporter-identity";
@@ -12,6 +13,8 @@ import {
   type SensitiveSiteCheckError,
 } from "@/lib/sensitive-site-check";
 import { requireEnvNumber } from "@/lib/required-env";
+import { collectAndProcessPhotos } from "@/lib/photo-upload";
+import { uploadPhoto, buildCorrectionPhotoKey } from "@/lib/photo-storage";
 
 const GENERIC_ACCEPTED_BODY = {
   status: "received",
@@ -43,11 +46,24 @@ export async function POST(request: Request) {
       return acceptedResponse(currentToken);
     }
 
-    const body = await request.json().catch(() => null);
+    const form = await request.formData().catch(() => null);
+    const rawPayload = form?.get("payload");
+    const body = typeof rawPayload === "string" ? JSON.parse(rawPayload) : null;
     const parsed = correctionSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { status: "invalid", errors: parsed.error.flatten().fieldErrors },
+        { status: 400, headers: { "Set-Cookie": reporterIdentityCookieHeader(currentToken) } }
+      );
+    }
+
+    const submittedAt = new Date();
+    const photoResult = form
+      ? await collectAndProcessPhotos(form, { lat: parsed.data.lat, lng: parsed.data.lng }, submittedAt)
+      : { ok: true as const, photos: [] };
+    if (!photoResult.ok) {
+      return NextResponse.json(
+        { status: "invalid", errors: { photos: [photoResult.message] } },
         { status: 400, headers: { "Set-Cookie": reporterIdentityCookieHeader(currentToken) } }
       );
     }
@@ -67,7 +83,8 @@ export async function POST(request: Request) {
     }
 
     const diff = buildCameraDiff(camera, parsed.data);
-    if (Object.keys(diff).length === 0) {
+    const reportsRemoval = parsed.data.reportedRemoved && camera.status !== CameraStatus.removed;
+    if (Object.keys(diff).length === 0 && !reportsRemoval) {
       return acceptedResponse(currentToken);
     }
 
@@ -79,8 +96,15 @@ export async function POST(request: Request) {
       proposedSensitiveSiteCheckErrors = siteCheck.checkErrors;
     }
 
+    const correctionReportId = randomUUID();
+    const photoIds = photoResult.photos.map(() => randomUUID());
+    for (const [i, photo] of photoResult.photos.entries()) {
+      await uploadPhoto(buildCorrectionPhotoKey(correctionReportId, photoIds[i]!), photo.data, photo.contentType);
+    }
+
     await prisma.correctionReport.create({
       data: {
+        id: correctionReportId,
         cameraId: camera.id,
         reporterId: currentToken,
         reporterNote: parsed.data.reporterNote,
@@ -88,8 +112,24 @@ export async function POST(request: Request) {
         proposedLng: diff.lng,
         proposedType: diff.type,
         proposedOperator: diff.operator,
+        proposedOperatorCategory: diff.operatorCategory,
         proposedCaptures: diff.captures,
+        photos: photoResult.photos.length > 0
+          ? {
+              create: photoResult.photos.map((photo, i) => ({
+                id: photoIds[i]!,
+                storageKey: buildCorrectionPhotoKey(correctionReportId, photoIds[i]!),
+                contentType: photo.contentType,
+                sizeBytes: photo.data.byteLength,
+                width: photo.width,
+                height: photo.height,
+                gpsDistanceMeters: photo.gpsDistanceMeters,
+                capturedAgeHours: photo.capturedAgeHours,
+              })),
+            }
+          : undefined,
         proposedNotes: diff.notes,
+        reportedRemoved: reportsRemoval,
         proposedSensitiveSiteMatches: proposedSensitiveSiteMatches ?? undefined,
         proposedSensitiveSiteCheckErrors: proposedSensitiveSiteCheckErrors ?? undefined,
       },

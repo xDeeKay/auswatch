@@ -3,7 +3,8 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { ModerationState, ModerationReasonCode } from "@/generated/prisma/enums";
+import { ModerationState, ModerationReasonCode, PhotoModerationStatus } from "@/generated/prisma/enums";
+import type { Prisma } from "@/generated/prisma/client";
 import {
   buildVerifyTransition,
   buildRemoveTransition,
@@ -24,7 +25,8 @@ async function applyTransition(
   cameraId: string,
   reasonCode: ModerationReasonCode,
   note: string,
-  build: (input: ModerationDecisionInput) => ModerationTransitionPlan
+  build: (input: ModerationDecisionInput) => ModerationTransitionPlan,
+  extraWrites?: (tx: Prisma.TransactionClient, cameraId: string) => Promise<void>
 ): Promise<ModerationActionResult> {
   try {
     const access = await requireModerator();
@@ -71,6 +73,7 @@ async function applyTransition(
       await tx.historyEvent.create({ data: plan.historyEvent });
       await tx.moderationAction.create({ data: plan.moderationAction });
       await tx.auditLogEntry.create({ data: plan.auditLogEntry });
+      if (extraWrites) await extraWrites(tx, cameraId);
       return "ok" as const;
     });
 
@@ -89,16 +92,51 @@ async function applyTransition(
   }
 }
 
+/**
+ * Resolves every still-pending CameraPhoto on this camera to approved or
+ * rejected, bundled into the same decision rather than a separate action -
+ * a photo left "pending" forever would never surface to a moderator again.
+ */
+async function resolvePendingPhotos(
+  tx: Prisma.TransactionClient,
+  cameraId: string,
+  approvedPhotoIds: Set<string>
+): Promise<void> {
+  const pendingPhotos = await tx.cameraPhoto.findMany({
+    where: { cameraId, moderationStatus: PhotoModerationStatus.pending },
+    select: { id: true },
+  });
+  await Promise.all(
+    pendingPhotos.map((photo) =>
+      tx.cameraPhoto.update({
+        where: { id: photo.id },
+        data: {
+          moderationStatus: approvedPhotoIds.has(photo.id)
+            ? PhotoModerationStatus.approved
+            : PhotoModerationStatus.rejected,
+        },
+      })
+    )
+  );
+}
+
 export async function verifyCamera(cameraId: string, formData: FormData): Promise<ModerationActionResult> {
   const reasonCode = parseReasonCode(formData.get("reasonCode"));
   if (!reasonCode) return { status: "error", message: "Select a reason." };
   const note = String(formData.get("note") ?? "");
-  return applyTransition(cameraId, reasonCode, note, buildVerifyTransition);
+  const approvedPhotoIds = new Set(formData.getAll("approvedPhotoIds").map(String));
+
+  return applyTransition(cameraId, reasonCode, note, buildVerifyTransition, (tx, cid) =>
+    resolvePendingPhotos(tx, cid, approvedPhotoIds)
+  );
 }
 
 export async function removeCamera(cameraId: string, formData: FormData): Promise<ModerationActionResult> {
   const reasonCode = parseReasonCode(formData.get("reasonCode"));
   if (!reasonCode) return { status: "error", message: "Select a reason." };
   const note = String(formData.get("note") ?? "");
-  return applyTransition(cameraId, reasonCode, note, buildRemoveTransition);
+
+  return applyTransition(cameraId, reasonCode, note, buildRemoveTransition, (tx, cid) =>
+    resolvePendingPhotos(tx, cid, new Set())
+  );
 }

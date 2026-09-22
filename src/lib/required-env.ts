@@ -9,3 +9,11 @@ export function requireEnvNumber(name: string): number {
   }
   return value;
 }
+
+export function requireEnvString(name: string): string {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") {
+    throw new Error(`${name} must be set (no default is provided in source)`);
+  }
+  return raw;
+}
