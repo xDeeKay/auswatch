@@ -12,25 +12,32 @@
     "test:watch": "vitest",
     "zone:add": "tsx scripts/add-sensitive-zone.ts",
     "state:backfill": "tsx scripts/backfill-camera-state.ts",
+    "osm-cache:refresh": "tsx scripts/refresh-sensitive-site-cache.ts",
     "moderators:seed-existing": "tsx scripts/seed-existing-moderators.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "node scripts/copy-maplibre-worker.js && prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
+    "@aws-sdk/client-s3": "^3.1133.0",
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "7.10.0",
     "dotenv": "^17.4.2",
+    "exifr": "^7.1.3",
     "leaflet": "^1.9.4",
+    "maplibre-gl": "^6.9.0",
     "next": "^15.0.0",
     "next-auth": "^5.0.0-beta.32",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
     "react-leaflet-cluster": "^4.1.3",
+    "sharp": "^0.35.4",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.12",
+    "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

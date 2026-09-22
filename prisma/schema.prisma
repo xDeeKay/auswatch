@@ -77,11 +77,16 @@ enum CorrectionReportStatus {
 
 enum ModerationReasonCode {
   verified_accurate
+  official_dataset
+  public_imagery
+  corroborating_reports
+  moderator_observation
   duplicate
   sensitive_site
   defamation_risk
   implausible
   out_of_scope
+  spam_or_low_quality
   other
 }
 
@@ -94,6 +99,21 @@ enum AuState {
   tas
   act
   nt
+}
+
+enum OperatorCategory {
+  state_police
+  local_council
+  transport_authority
+  private
+  unknown
+}
+
+enum ExternalImportSource {
+  act_open_data
+  vic_open_data
+  nsw_open_data
+  qld_open_data
 }
 
 enum ModeratorRole {
@@ -121,12 +141,19 @@ enum AuditActionType {
   moderator_reactivate
 }
 
+enum PhotoModerationStatus {
+  pending
+  approved
+  rejected
+}
+
 model Camera {
   id                   String               @id @default(cuid())
   lat                  Float
   lng                  Float
   type                 CameraType
-  operator             String
+  operator             String               @default("")
+  operatorCategory     OperatorCategory     @default(unknown)
   captures             CaptureType
   status               CameraStatus         @default(unconfirmed)
   notes                String               @default("")
@@ -134,13 +161,17 @@ model Camera {
   moderationState      ModerationState      @default(pending)
   state                AuState?
   stateOverride        Boolean              @default(false)
+  externalSource       ExternalImportSource?
+  externalRef          String?
   createdAt            DateTime             @default(now())
   history              HistoryEvent[]
   sensitiveSiteMatches SensitiveSiteMatch[]
   moderationActions    ModerationAction[]
   correctionReports    CorrectionReport[]
   internalNotes        CameraNote[]
+  photos               CameraPhoto[]
 
+  @@unique([externalSource, externalRef])
   @@index([status])
   @@index([moderationState])
   @@index([type])
@@ -175,6 +206,18 @@ model SensitiveZone {
   @@index([active])
 }
 
+model SensitiveSiteOsmCache {
+  id          String                @id @default(cuid())
+  category    SensitiveZoneCategory
+  lat         Float
+  lng         Float
+  detail      String
+  refreshedAt DateTime
+
+  @@index([lat, lng])
+  @@index([refreshedAt])
+}
+
 model SensitiveSiteMatch {
   id             String                   @id @default(cuid())
   camera         Camera                   @relation(fields: [cameraId], references: [id], onDelete: Cascade)
@@ -184,6 +227,8 @@ model SensitiveSiteMatch {
   zone           SensitiveZone?           @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   zoneId         String?
   distanceMeters Float?
+  lat            Float?
+  lng            Float?
   detail         String                   @default("")
   createdAt      DateTime                 @default(now())
 
@@ -198,12 +243,17 @@ model CorrectionReport {
   reporterId String
   status     CorrectionReportStatus @default(pending)
 
-  proposedLat      Float?
-  proposedLng      Float?
-  proposedType     CameraType?
-  proposedOperator String?
-  proposedCaptures CaptureType?
-  proposedNotes    String?
+  proposedLat              Float?
+  proposedLng              Float?
+  proposedType             CameraType?
+  proposedOperator         String?
+  proposedOperatorCategory OperatorCategory?
+  proposedCaptures         CaptureType?
+  proposedNotes            String?
+  // A separate claim, not a mirrored full-state field like the proposed*
+  // columns above: "this camera is no longer there," independent of whether
+  // any other field also changed.
+  reportedRemoved          Boolean            @default(false)
 
   reporterNote String    @default("")
   createdAt    DateTime  @default(now())
@@ -213,9 +263,55 @@ model CorrectionReport {
   proposedSensitiveSiteCheckErrors Json?
 
   moderationActions ModerationAction[]
+  photos            CorrectionPhoto[]
 
   @@index([cameraId, status])
   @@index([reporterId, createdAt])
+}
+
+model CameraPhoto {
+  id       String @id @default(cuid())
+  camera   Camera @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  cameraId String
+
+  storageKey  String
+  contentType String
+  sizeBytes   Int
+  width       Int
+  height      Int
+
+  // Derived-only signals computed from the photo's EXIF at upload time; the
+  // raw GPS coordinate and capture timestamp are never stored (see
+  // src/lib/photo-processing.ts), only how far/how stale they imply the
+  // photo is relative to the submission itself.
+  gpsDistanceMeters Float?
+  capturedAgeHours  Float?
+
+  // Never public until a moderator explicitly approves it, independent of
+  // the camera's own moderationState - see the "Decision" section on the
+  // ticket detail page, where this is decided alongside verifying the camera.
+  moderationStatus PhotoModerationStatus @default(pending)
+  createdAt        DateTime              @default(now())
+
+  @@index([cameraId])
+}
+
+model CorrectionPhoto {
+  id                 String           @id @default(cuid())
+  correctionReport   CorrectionReport @relation(fields: [correctionReportId], references: [id], onDelete: Cascade)
+  correctionReportId String
+
+  storageKey  String
+  contentType String
+  sizeBytes   Int
+  width       Int
+  height      Int
+
+  gpsDistanceMeters Float?
+  capturedAgeHours  Float?
+  createdAt         DateTime @default(now())
+
+  @@index([correctionReportId])
 }
 
 model CameraNote {
