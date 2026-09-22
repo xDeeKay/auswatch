@@ -356,4 +356,32 @@ describe("revertAuditLogEntry", () => {
       }),
     });
   });
+
+  it("redoing a camera_correction_approve revert restores camera fields without leaking correctionReportId into the update, and re-approves the correction", async () => {
+    // The original approve's `after` carries correctionReportId/createdSensitiveSiteMatchIds
+    // alongside real camera fields (for audit-log display), but its `before`
+    // does not. Reverting that entry produces a revert entry whose `before`
+    // is the original `after` verbatim - so redoing (reverting the revert)
+    // reads this same asymmetric object back as `before` here, and the id is
+    // recovered from there rather than from `after` (which no longer has it).
+    const revertEntry = baseEntry({
+      id: "revert-entry-1",
+      action: "camera_correction_approve",
+      entityId: "cam-1",
+      before: { operator: "NSW Police", correctionReportId: "correction-1", createdSensitiveSiteMatchIds: ["m1"] },
+      after: { operator: "WA Police" },
+      revertsEntryId: "entry-1",
+    });
+    auditLogEntryFindUniqueMock.mockResolvedValueOnce(revertEntry);
+    auditLogEntryFindFirstMock.mockResolvedValueOnce(revertEntry);
+
+    const result = await revertAuditLogEntry("revert-entry-1");
+
+    expect(result.status).toBe("ok");
+    expect(cameraUpdateMock).toHaveBeenCalledWith({ where: { id: "cam-1" }, data: { operator: "NSW Police" } });
+    expect(correctionReportUpdateManyMock).toHaveBeenCalledWith({
+      where: { id: "correction-1" },
+      data: { status: "approved", reviewedAt: expect.any(Date) },
+    });
+  });
 });

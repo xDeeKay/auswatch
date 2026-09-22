@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ModeratorRole } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/moderator-access";
@@ -6,6 +7,10 @@ import { reactivateModerator } from "@/lib/actions/admin-moderators";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+
+export const metadata: Metadata = {
+  title: "AusWatch - Moderators",
+};
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -47,13 +52,13 @@ export default async function AdminModeratorsPage() {
                     {moderator.isActive ? "ACTIVE" : "DEACTIVATED"}
                   </Badge>
                 </div>
-                <p className="mt-1 font-mono text-xs text-parchment/50">{moderator.email}</p>
+                <p className="mt-1 font-label text-xs text-parchment/50">{moderator.email}</p>
                 <p className="mt-2 text-sm text-parchment/85">
                   {moderator.role === ModeratorRole.admin
                     ? "Unrestricted access to every state and camera type."
                     : summarizeGrants(moderator.grants)}
                 </p>
-                <p className="mt-2 font-mono text-xs text-parchment/50">
+                <p className="mt-2 font-label text-xs text-parchment/50">
                   Added {dateFormatter.format(moderator.createdAt)}
                 </p>
               </div>

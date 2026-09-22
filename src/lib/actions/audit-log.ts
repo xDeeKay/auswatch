@@ -6,7 +6,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { AuditActionType, ModeratorRole, HistoryEventType, CorrectionReportStatus } from "@/generated/prisma/enums";
 import { requireAdmin, accessDeniedMessage, countOtherActiveAdmins } from "@/lib/moderator-access";
 import { assertRevertable, buildRevertAuditEntry } from "@/lib/audit-log-revert";
-import { toJsonInput } from "@/lib/audit-log-payloads";
+import { toJsonInput, pickCameraFields } from "@/lib/audit-log-payloads";
 import { diffGrants } from "@/lib/moderator-grants";
 import type {
   CameraLifecyclePayload,
@@ -134,23 +134,44 @@ async function restoreEntry(
     }
 
     case AuditActionType.camera_correction_approve: {
-      const before = entry.before as CameraFieldsPayload;
-      const after = entry.after as CameraFieldsPayload & { correctionReportId: string };
+      const before = pickCameraFields(entry.before);
+      // correctionReportId (and createdSensitiveSiteMatchIds) are extra
+      // bookkeeping keys spliced onto the ORIGINAL approve's `after` only
+      // (see pickCameraFields) - `before` never carries them. Reverting the
+      // original approve (an undo) reads the id off entry.after as usual.
+      // Reverting a *revert* of one (a redo) sees before/after swapped
+      // wholesale, so the very same id shows up in entry.before instead -
+      // check both sides rather than assuming a direction, and use whichever
+      // side it's actually on to tell the two cases apart.
+      const beforeRaw = entry.before as Record<string, unknown> | null;
+      const afterRaw = entry.after as CameraFieldsPayload & { correctionReportId?: string };
+      const isUndo = typeof afterRaw.correctionReportId === "string";
+      const correctionReportId = isUndo
+        ? afterRaw.correctionReportId
+        : (beforeRaw?.correctionReportId as string | undefined);
+
       await tx.camera.update({ where: { id: entry.entityId }, data: before });
       await tx.historyEvent.create({
         data: {
           cameraId: entry.entityId,
           date: new Date(),
           eventType: HistoryEventType.corrected,
-          note: "Reverted by an admin: correction approval undone.",
+          note: isUndo
+            ? "Reverted by an admin: correction approval undone."
+            : "Reverted by an admin: correction approval redone.",
         },
       });
-      // The correction is put back to pending so it can be re-reviewed, since
-      // its approval is no longer reflected on the camera.
-      await tx.correctionReport.updateMany({
-        where: { id: after.correctionReportId },
-        data: { status: CorrectionReportStatus.pending, reviewedAt: null },
-      });
+      if (correctionReportId) {
+        await tx.correctionReport.updateMany({
+          where: { id: correctionReportId },
+          data: isUndo
+            ? // Put back to pending so it can be re-reviewed, since its
+              // approval is no longer reflected on the camera.
+              { status: CorrectionReportStatus.pending, reviewedAt: null }
+            : // Redo: the approval is live on the camera again.
+              { status: CorrectionReportStatus.approved, reviewedAt: new Date() },
+        });
+      }
       return { ok: true };
     }
 

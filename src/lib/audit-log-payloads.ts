@@ -7,6 +7,7 @@ import type {
   CaptureType,
   ModerationState,
   ModeratorRole,
+  OperatorCategory,
 } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import type { GrantCell } from "@/lib/moderator-grants";
@@ -28,9 +29,41 @@ export type CameraFieldsPayload = Partial<{
   stateOverride: boolean;
   type: CameraType;
   operator: string;
+  operatorCategory: OperatorCategory;
   captures: CaptureType;
   notes: string;
 }>;
+
+const CAMERA_FIELDS_PAYLOAD_KEYS = [
+  "lat",
+  "lng",
+  "state",
+  "stateOverride",
+  "type",
+  "operator",
+  "operatorCategory",
+  "captures",
+  "notes",
+] as const satisfies readonly (keyof CameraFieldsPayload)[];
+
+/**
+ * The stored `after` for a camera_correction_approve entry carries extra
+ * bookkeeping keys (correctionReportId, createdSensitiveSiteMatchIds)
+ * alongside the real camera fields, for audit-log display only - reverting a
+ * revert of that entry (a "redo") swaps before/after wholesale, so those
+ * extra keys end up in what's read back as a CameraFieldsPayload. Passing
+ * that straight to camera.update() throws (Camera has no such fields), so
+ * every read of a stored camera-fields payload for a DB write must be
+ * filtered through this rather than cast and used directly.
+ */
+export function pickCameraFields(payload: unknown): CameraFieldsPayload {
+  const record = (payload ?? {}) as Record<string, unknown>;
+  const result: CameraFieldsPayload = {};
+  for (const key of CAMERA_FIELDS_PAYLOAD_KEYS) {
+    if (key in record) (result as Record<string, unknown>)[key] = record[key];
+  }
+  return result;
+}
 
 export type CorrectionStatusPayload = { status: "pending" | "approved" | "rejected"; reviewedAt: string | null };
 

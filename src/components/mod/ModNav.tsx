@@ -3,15 +3,17 @@ import { signOut } from "@/auth";
 import { ModeratorRole } from "@/generated/prisma/enums";
 
 const linkClass =
-  "font-mono text-xs tracking-[0.05em] text-parchment/70 transition hover:text-amber";
+  "font-label text-sm text-parchment/70 transition hover:text-amber";
 
 export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: string }) {
   return (
-    <nav className="border-b border-parchment/10">
-      <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 px-6 py-3">
-        <div className="flex flex-wrap items-center gap-5">
-          <Link href="/moderate" className="font-mono text-xs tracking-[0.3em] text-parchment/50">
-            AUSWATCH
+    <nav className="border-b border-parchment/10 px-6">
+      <div className="flex w-full flex-wrap items-center justify-between gap-x-8 gap-y-3 py-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
+          <Link href="/moderate" className="flex items-center gap-2.5 font-heading text-lg text-parchment">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/auswatch-logo.svg" alt="" width={22} height={29} />
+            AusWatch
           </Link>
           <Link href="/moderate" className={linkClass}>
             Queue
@@ -31,7 +33,7 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-parchment/50">{userLabel}</span>
+          <span className="font-label text-xs text-parchment/50">{userLabel}</span>
           <form
             action={async () => {
               "use server";

@@ -6,7 +6,7 @@ const CONTROL_CLASS =
 const PLACEHOLDER_CLASS = "placeholder:text-parchment/30";
 
 export function Label({ children }: { children: ReactNode }) {
-  return <label className="font-mono text-xs tracking-[0.05em] text-amber">{children}</label>;
+  return <label className="font-label text-xs text-amber">{children}</label>;
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {

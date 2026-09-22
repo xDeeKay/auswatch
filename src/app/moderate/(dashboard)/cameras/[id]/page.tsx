@@ -1,16 +1,20 @@
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import {
   AuditEntityType,
   CorrectionReportStatus,
-  ModerationReasonCode,
   ModerationState,
   ModeratorRole,
+  PhotoModerationStatus,
   SensitiveSiteMatchSource,
 } from "@/generated/prisma/enums";
-import { TYPE_LABEL, CAPTURE_LABEL, STATUS_LABEL, HISTORY_EVENT_LABEL } from "@/lib/camera-labels";
+import { TYPE_LABEL, CAPTURE_LABEL, STATUS_LABEL, HISTORY_EVENT_LABEL, OPERATOR_CATEGORY_LABEL } from "@/lib/camera-labels";
 import {
   REASON_CODE_LABEL,
+  VERIFY_REASON_CODES,
+  REMOVE_REASON_CODES,
   ACTION_TYPE_LABEL,
   MODERATION_STATE_LABEL,
   MATCH_SOURCE_LABEL,
@@ -29,16 +33,37 @@ import { AUDIT_ACTION_LABEL } from "@/lib/audit-labels";
 import { formatAuditPayload } from "@/lib/audit-log-format";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Label, Select, TextArea } from "@/components/ui/Field";
-import { DiffTable } from "@/components/ui/DiffTable";
+import TicketLocationMap from "@/components/TicketLocationMap";
+
+export const metadata: Metadata = {
+  title: "AusWatch - Camera review",
+};
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
   month: "short",
   day: "numeric",
 });
+
+function formatGpsSignal(gpsDistanceMeters: number | null): string {
+  if (gpsDistanceMeters === null) return "GPS: no location data in photo";
+  return `GPS: ${Math.round(gpsDistanceMeters).toLocaleString("en-AU")}m from submitted pin`;
+}
+
+function formatCapturedAgeSignal(capturedAgeHours: number | null): string {
+  if (capturedAgeHours === null) return "Taken: no capture date in photo";
+  if (capturedAgeHours < 0) return "Taken: after the submission was sent (check this)";
+  if (capturedAgeHours < 48) return `Taken: ${Math.round(capturedAgeHours)}h before submission`;
+  return `Taken: ${Math.round(capturedAgeHours / 24)}d before submission`;
+}
+
+const PHOTO_STATUS_LABEL: Record<string, string> = {
+  pending: "Awaiting decision",
+  approved: "Approved for public display",
+  rejected: "Not shown publicly",
+};
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -47,6 +72,26 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-AU", {
   hour: "2-digit",
   minute: "2-digit",
 });
+
+function CollapsibleSection({
+  title,
+  defaultOpen,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details open={defaultOpen} className="group rounded border border-parchment/10">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-heading text-base text-parchment [&::-webkit-details-marker]:hidden">
+        {title}
+        <span className="text-parchment/40 transition group-open:rotate-180">&#9662;</span>
+      </summary>
+      <div className="flex flex-col gap-3 px-4 pb-4">{children}</div>
+    </details>
+  );
+}
 
 export default async function CameraDetailPage({
   params,
@@ -66,9 +111,11 @@ export default async function CameraDetailPage({
       correctionReports: {
         where: { status: CorrectionReportStatus.pending },
         orderBy: { createdAt: "asc" },
+        include: { photos: true },
       },
       internalNotes: { where: { deletedAt: null }, include: { author: true }, orderBy: { createdAt: "desc" } },
       sensitiveSiteMatches: true,
+      photos: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -96,205 +143,238 @@ export default async function CameraDetailPage({
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   });
 
+  // Revert eligibility is per-entity, not per-row: this page mixes entries
+  // for the camera itself, each of its correction reports, and each of its
+  // notes, and revertAuditLogEntry only allows reverting the single most
+  // recent (unreverted) entry within one entity's own timeline (see
+  // assertRevertable in audit-log-revert.ts) - reverting out of order would
+  // leave that entity in an undefined intermediate state. auditLog is
+  // already ordered newest-first, matching the query revertAuditLogEntry
+  // itself uses to find the head, so the first entry seen per entity here is
+  // exactly that entity's current head.
+  const headEntryIdByEntity = new Map<string, string>();
+  for (const entry of auditLog) {
+    const key = `${entry.entityType}:${entry.entityId}`;
+    if (!headEntryIdByEntity.has(key)) headEntryIdByEntity.set(key, entry.id);
+  }
+
+  const sensitiveSiteMarkers = camera.sensitiveSiteMatches
+    .filter((m): m is typeof m & { lat: number; lng: number } => m.lat !== null && m.lng !== null)
+    .map((m) => ({ lat: m.lat, lng: m.lng }));
+
+  const proposedByField = new Map(
+    camera.correctionReports.flatMap((correction) =>
+      buildCorrectionDiffRows(camera, correction).map((row) => [row.field, row.after] as const)
+    )
+  );
+
+  function proposedSuffix(field: string) {
+    const after = proposedByField.get(field);
+    return after ? <span className="ml-1 text-amber">&rarr; {after}</span> : null;
+  }
+
   return (
     <>
       <PageHeader
         title={TYPE_LABEL[camera.type]}
         description={
-          isPending ? <Badge tone="amber">NEW SUBMISSION</Badge> : <Badge tone="neutral">{MODERATION_STATE_LABEL[camera.moderationState]}</Badge>
+          isPending ? (
+            <Badge tone="amber">NEW SUBMISSION</Badge>
+          ) : camera.correctionReports.length > 0 ? (
+            <Badge tone="neutral">CORRECTION</Badge>
+          ) : (
+            <Badge tone="neutral">{MODERATION_STATE_LABEL[camera.moderationState]}</Badge>
+          )
         }
       />
 
-      <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="font-mono text-xs tracking-[0.05em] text-amber">OPERATOR</dt>
-          <dd className="text-parchment/85">{camera.operator || "Unknown"}</dd>
-        </div>
-        <div>
-          <dt className="font-mono text-xs tracking-[0.05em] text-amber">APPEARS TO CAPTURE</dt>
-          <dd className="text-parchment/85">{CAPTURE_LABEL[camera.captures]}</dd>
-        </div>
-        <div>
-          <dt className="font-mono text-xs tracking-[0.05em] text-amber">STATUS</dt>
-          <dd className="text-parchment/85">{STATUS_LABEL[camera.status]}</dd>
-        </div>
-        <div>
-          <dt className="font-mono text-xs tracking-[0.05em] text-amber">MODERATION STATE</dt>
-          <dd className="text-parchment/85">{MODERATION_STATE_LABEL[camera.moderationState]}</dd>
-        </div>
-        <div>
-          <dt className="font-mono text-xs tracking-[0.05em] text-amber">LOCATION</dt>
-          <dd className="font-mono text-parchment/85">
-            {camera.lat.toFixed(5)}, {camera.lng.toFixed(5)}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-mono text-xs tracking-[0.05em] text-amber">STATE</dt>
-          <dd className="text-parchment/85">
-            {camera.state ? STATE_LABEL[camera.state] : "Unresolved"}
-            {camera.stateOverride && (
-              <span className="ml-1 font-mono text-xs text-parchment/50">(manually set)</span>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-mono text-xs tracking-[0.05em] text-amber">ID</dt>
-          <dd className="font-mono text-parchment/85">{camera.id}</dd>
-        </div>
-        {camera.notes && (
-          <div className="sm:col-span-2">
-            <dt className="font-mono text-xs tracking-[0.05em] text-amber">NOTES</dt>
-            <dd className="text-parchment/85">{camera.notes}</dd>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
+        <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+          <table className="w-full table-fixed text-sm">
+            <tbody>
+              {isPending && (
+                <tr className="border-t border-parchment/10 first:border-t-0">
+                  <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                    SUBMITTED
+                  </th>
+                  <td className="py-1.5 text-parchment/85">{dateTimeFormatter.format(camera.createdAt)}</td>
+                </tr>
+              )}
+              {camera.correctionReports.length > 0 && (
+                <tr className="border-t border-parchment/10 first:border-t-0">
+                  <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                    SUBMITTED
+                  </th>
+                  <td className="py-1.5 text-parchment/85">
+                    {camera.correctionReports.map((c) => dateTimeFormatter.format(c.createdAt)).join(", ")}
+                  </td>
+                </tr>
+              )}
+              <tr className="border-t border-parchment/10 first:border-t-0">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  ID
+                </th>
+                <td className="break-words py-1.5 font-label text-parchment/85">{camera.id}</td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  STATUS
+                </th>
+                <td className="py-1.5 text-parchment/85">
+                  {STATUS_LABEL[camera.status]}
+                  {proposedSuffix("status")}
+                </td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  MODERATION STATE
+                </th>
+                <td className="py-1.5 text-parchment/85">{MODERATION_STATE_LABEL[camera.moderationState]}</td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  CAMERA TYPE
+                </th>
+                <td className="py-1.5 text-parchment/85">
+                  {TYPE_LABEL[camera.type]}
+                  {proposedSuffix("type")}
+                </td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  APPEARS TO CAPTURE
+                </th>
+                <td className="py-1.5 text-parchment/85">
+                  {CAPTURE_LABEL[camera.captures]}
+                  {proposedSuffix("captures")}
+                </td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  OPERATOR CATEGORY
+                </th>
+                <td className="py-1.5 text-parchment/85">
+                  {OPERATOR_CATEGORY_LABEL[camera.operatorCategory]}
+                  {proposedSuffix("operatorCategory")}
+                </td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  OPERATOR
+                </th>
+                <td className="py-1.5 text-parchment/85">
+                  {camera.operator || "Unknown"}
+                  {proposedSuffix("operator")}
+                </td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left align-top font-label text-xs font-normal text-parchment/50">
+                  NOTES
+                </th>
+                <td className="break-words py-1.5 text-parchment/85">
+                  {camera.notes || "(none)"}
+                  {proposedSuffix("notes")}
+                </td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  STATE/TERRITORY
+                </th>
+                <td className="py-1.5 text-parchment/85">
+                  {camera.state ? STATE_LABEL[camera.state] : "Unresolved"}
+                  {camera.stateOverride && (
+                    <span className="ml-1 font-label text-xs text-parchment/50">(manually set)</span>
+                  )}
+                </td>
+              </tr>
+              <tr className="border-t border-parchment/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                  LOCATION
+                </th>
+                <td className="py-1.5 font-label text-parchment/85">
+                  {camera.lat.toFixed(5)}, {camera.lng.toFixed(5)}
+                  {proposedSuffix("location")}
+                </td>
+              </tr>
+              {camera.correctionReports.some((c) => c.reporterNote) && (
+                <tr className="border-t border-parchment/10">
+                  <th scope="row" className="w-44 py-1.5 pr-4 text-left align-top font-label text-xs font-normal text-parchment/50">
+                    CORRECTION NOTE
+                  </th>
+                  <td className="break-words py-1.5 text-parchment/85">
+                    {camera.correctionReports
+                      .filter((c) => c.reporterNote)
+                      .map((c, i) => (
+                        <p key={c.id} className={i > 0 ? "mt-1" : undefined}>
+                          &ldquo;{c.reporterNote}&rdquo;
+                        </p>
+                      ))}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          <div className="h-60 overflow-hidden rounded border border-parchment/20">
+            <TicketLocationMap lat={camera.lat} lng={camera.lng} sensitiveSites={sensitiveSiteMarkers} />
           </div>
-        )}
-      </dl>
 
-      {camera.sensitiveSiteMatches.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {camera.sensitiveSiteMatches.map((match) =>
-            match.source === SensitiveSiteMatchSource.check_error ? (
-              <div key={match.id} className="rounded border border-error/50 bg-error/10 px-3 py-2 text-sm">
-                <p className="font-mono text-xs tracking-[0.05em] text-error">AUTOMATED CHECK FAILED</p>
-                <p className="mt-1 text-parchment/80">Manual review required. {match.detail}</p>
-              </div>
-            ) : (
-              <div key={match.id} className="rounded border border-amber/40 bg-amber/5 px-3 py-2 text-sm">
-                <p className="font-mono text-xs tracking-[0.05em] text-amber">
-                  {MATCH_SOURCE_LABEL[match.source]}
-                  {match.category ? ` - ${ZONE_CATEGORY_LABEL[match.category]}` : ""}
-                </p>
-                {match.distanceMeters !== null && (
-                  <p className="mt-1 font-mono text-parchment/80">{Math.round(match.distanceMeters)}m away</p>
-                )}
-              </div>
-            )
+          {camera.sensitiveSiteMatches.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {camera.sensitiveSiteMatches.map((match) =>
+                match.source === SensitiveSiteMatchSource.check_error ? (
+                  <div key={match.id} className="rounded border border-error/50 bg-error/10 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-error">AUTOMATED CHECK FAILED</p>
+                    <p className="mt-1 text-parchment/80">Manual review required. {match.detail}</p>
+                  </div>
+                ) : (
+                  <div key={match.id} className="rounded border border-amber/40 bg-amber/5 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-amber">
+                      {MATCH_SOURCE_LABEL[match.source]}
+                      {match.category ? ` - ${ZONE_CATEGORY_LABEL[match.category]}` : ""}
+                    </p>
+                    {match.distanceMeters !== null && (
+                      <p className="mt-1 font-label text-parchment/80">{Math.round(match.distanceMeters)}m away</p>
+                    )}
+                  </div>
+                )
+              )}
+            </div>
           )}
         </div>
-      )}
 
-      {isPending && (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-heading text-base text-parchment">Decision</h2>
-          {canActOnCamera ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <form
-                action={async (formData: FormData) => {
-                  "use server";
-                  await verifyCamera(camera.id, formData);
-                }}
-                className="flex flex-col gap-2"
-              >
-                <Select name="reasonCode" defaultValue="" required>
-                  <option value="" disabled>
-                    Reason for verifying
-                  </option>
-                  {Object.values(ModerationReasonCode).map((code) => (
-                    <option key={code} value={code}>
-                      {REASON_CODE_LABEL[code]}
-                    </option>
-                  ))}
-                </Select>
-                <TextArea name="note" placeholder="Optional note" rows={2} />
-                <Button type="submit" tone="primary">
-                  Verify
-                </Button>
-              </form>
-
-              <form
-                action={async (formData: FormData) => {
-                  "use server";
-                  await removeCamera(camera.id, formData);
-                }}
-                className="flex flex-col gap-2"
-              >
-                <Select name="reasonCode" defaultValue="" required>
-                  <option value="" disabled>
-                    Reason for removing
-                  </option>
-                  {Object.values(ModerationReasonCode).map((code) => (
-                    <option key={code} value={code}>
-                      {REASON_CODE_LABEL[code]}
-                    </option>
-                  ))}
-                </Select>
-                <TextArea name="note" placeholder="Optional note" rows={2} />
-                <Button type="submit" tone="destructive">
-                  Remove
-                </Button>
-              </form>
-            </div>
-          ) : (
-            <p className="font-mono text-xs text-parchment/50">
-              View only. You don&rsquo;t have permission to act on this ticket.
-            </p>
-          )}
-        </section>
-      )}
-
-      {canActOnCamera && (
-        <section className="flex flex-col gap-2 rounded border border-parchment/10 p-4">
-          <h2 className="font-mono text-xs tracking-[0.05em] text-amber">CORRECT STATE</h2>
-          <p className="text-xs text-parchment/50">
-            Overrides the auto-derived state, for a border town or bad coordinates the
-            automatic derivation got wrong.
-          </p>
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              await overrideCameraState(camera.id, formData);
-            }}
-            className="flex flex-wrap items-center gap-2"
-          >
-            <Select name="state" defaultValue={camera.state ?? ""} className="w-auto">
-              <option value="">Unresolved</option>
-              {Object.values(AuState).map((state) => (
-                <option key={state} value={state}>
-                  {STATE_LABEL[state]}
-                </option>
-              ))}
-            </Select>
-            <Button type="submit">Set state</Button>
-          </form>
-        </section>
-      )}
-
-      {camera.correctionReports.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <h2 className="font-heading text-base text-parchment">
-            Pending corrections ({camera.correctionReports.length})
-          </h2>
-          {camera.correctionReports.map((correction) => {
-            const diffRows = buildCorrectionDiffRows(camera, correction).map((row) => ({
-              key: row.field,
-              label: row.label,
-              before: row.before,
-              after: row.after,
-            }));
-            return (
-              <Card key={correction.id}>
-                <p className="font-mono text-xs text-parchment/50">
-                  Submitted {dateFormatter.format(correction.createdAt)}
-                </p>
-                {correction.reporterNote && (
-                  <p className="mt-2 text-sm text-parchment/85">&ldquo;{correction.reporterNote}&rdquo;</p>
-                )}
-
-                <DiffTable rows={diffRows} beforeLabel="CURRENT" afterLabel="PROPOSED" />
-
+        {(isPending || canActOnCamera || camera.correctionReports.length > 0) && (
+          <div className="flex flex-col gap-6 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+            {isPending && (
+              <section className="flex flex-col gap-3">
                 {canActOnCamera ? (
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-6">
                     <form
                       action={async (formData: FormData) => {
                         "use server";
-                        await approveCorrection(correction.id, formData);
+                        await verifyCamera(camera.id, formData);
                       }}
                       className="flex flex-col gap-2"
                     >
+                      {camera.photos.filter((p) => p.moderationStatus === PhotoModerationStatus.pending).length > 0 && (
+                        <div className="flex flex-col gap-1.5 rounded border border-parchment/20 p-2.5">
+                          <p className="font-label text-xs text-amber">APPROVE FOR PUBLIC DISPLAY</p>
+                          {camera.photos
+                            .filter((p) => p.moderationStatus === PhotoModerationStatus.pending)
+                            .map((photo, i) => (
+                              <label key={photo.id} className="flex items-center gap-2 text-sm text-parchment/85">
+                                <input type="checkbox" name="approvedPhotoIds" value={photo.id} className="accent-amber" />
+                                Photo {i + 1}
+                              </label>
+                            ))}
+                          <p className="text-xs text-parchment/50">Unchecked photos stay moderator-only.</p>
+                        </div>
+                      )}
                       <Select name="reasonCode" defaultValue="" required>
                         <option value="" disabled>
-                          Reason for approving
+                          Reason for verifying
                         </option>
-                        {Object.values(ModerationReasonCode).map((code) => (
+                        {VERIFY_REASON_CODES.map((code) => (
                           <option key={code} value={code}>
                             {REASON_CODE_LABEL[code]}
                           </option>
@@ -302,22 +382,22 @@ export default async function CameraDetailPage({
                       </Select>
                       <TextArea name="note" placeholder="Optional note" rows={2} />
                       <Button type="submit" tone="primary">
-                        Approve
+                        Verify
                       </Button>
                     </form>
 
                     <form
                       action={async (formData: FormData) => {
                         "use server";
-                        await rejectCorrection(correction.id, formData);
+                        await removeCamera(camera.id, formData);
                       }}
                       className="flex flex-col gap-2"
                     >
                       <Select name="reasonCode" defaultValue="" required>
                         <option value="" disabled>
-                          Reason for rejecting
+                          Reason for removing
                         </option>
-                        {Object.values(ModerationReasonCode).map((code) => (
+                        {REMOVE_REASON_CODES.map((code) => (
                           <option key={code} value={code}>
                             {REASON_CODE_LABEL[code]}
                           </option>
@@ -325,146 +405,272 @@ export default async function CameraDetailPage({
                       </Select>
                       <TextArea name="note" placeholder="Optional note" rows={2} />
                       <Button type="submit" tone="destructive">
-                        Reject
+                        Remove
                       </Button>
                     </form>
                   </div>
                 ) : (
-                  <p className="mt-5 font-mono text-xs text-parchment/50">
+                  <p className="font-label text-xs text-parchment/50">
                     View only. You don&rsquo;t have permission to act on this ticket.
                   </p>
                 )}
-              </Card>
-            );
-          })}
-        </section>
-      )}
+              </section>
+            )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-base text-parchment">History</h2>
-        {camera.history.length === 0 && (
-          <p className="text-sm text-parchment/50">No history events yet.</p>
-        )}
-        <ol className="flex flex-col gap-2">
-          {camera.history.map((event) => (
-            <li key={event.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
-              <p className="font-mono text-xs text-parchment/50">
-                {dateFormatter.format(event.date)} - {HISTORY_EVENT_LABEL[event.eventType]}
-              </p>
-              {event.note && <p className="mt-1 text-parchment/85">{event.note}</p>}
-            </li>
-          ))}
-        </ol>
-      </section>
+            {camera.correctionReports.length > 0 && (
+              <section className="flex flex-col gap-4">
+                {canActOnCamera ? (
+                  camera.correctionReports.map((correction) => (
+                    <div key={correction.id} className="flex flex-col gap-2">
+                      {camera.correctionReports.length > 1 && (
+                        <p className="font-label text-xs text-parchment/50">
+                          Submitted {dateFormatter.format(correction.createdAt)}
+                        </p>
+                      )}
+                      <form
+                        action={async (formData: FormData) => {
+                          "use server";
+                          await approveCorrection(correction.id, formData);
+                        }}
+                        className="flex flex-col gap-2"
+                      >
+                        <Select name="reasonCode" defaultValue="" required>
+                          <option value="" disabled>
+                            Reason for approving
+                          </option>
+                          {VERIFY_REASON_CODES.map((code) => (
+                            <option key={code} value={code}>
+                              {REASON_CODE_LABEL[code]}
+                            </option>
+                          ))}
+                        </Select>
+                        <TextArea name="note" placeholder="Optional note" rows={2} />
+                        <Button type="submit" tone="primary">
+                          Approve
+                        </Button>
+                      </form>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-base text-parchment">Moderation actions</h2>
-        {camera.moderationActions.length === 0 && (
-          <p className="text-sm text-parchment/50">No moderator decisions yet.</p>
-        )}
-        <ol className="flex flex-col gap-2">
-          {camera.moderationActions.map((action) => (
-            <li key={action.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
-              <p className="font-mono text-xs text-parchment/50">
-                {dateFormatter.format(action.createdAt)} - {ACTION_TYPE_LABEL[action.action]} by{" "}
-                {action.actor.name ?? action.actor.email ?? "Unknown moderator"} ({REASON_CODE_LABEL[action.reasonCode]})
-                {action.auditLogEntry?.revertedAt && (
-                  <Badge tone="error" className="ml-2">
-                    REVERTED
-                  </Badge>
-                )}
-              </p>
-              {action.note && <p className="mt-1 text-parchment/85">{action.note}</p>}
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-base text-parchment">Audit log</h2>
-        <p className="text-xs text-parchment/50">
-          Every edit to this record, with before/after values.{" "}
-          {isAdmin ? "Admins can revert any unreverted entry." : "Admins can revert entries here if needed."}
-        </p>
-        {auditLog.length === 0 && <p className="text-sm text-parchment/50">No audit entries yet.</p>}
-        <ol className="flex flex-col gap-2">
-          {auditLog.map((entry) => {
-            const afterRows = formatAuditPayload(entry.after);
-            return (
-              <li key={entry.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-mono text-xs text-parchment/50">
-                    {dateTimeFormatter.format(entry.createdAt)} - {AUDIT_ACTION_LABEL[entry.action]} by{" "}
-                    {entry.actor.name ?? entry.actor.email ?? "Unknown"}
-                    {entry.revertedAt && (
-                      <Badge tone="error" className="ml-2">
-                        REVERTED
-                      </Badge>
-                    )}
-                  </p>
-                  {isAdmin && entry.revertedAt === null && (
-                    <form
-                      action={async () => {
-                        "use server";
-                        await revertAuditLogEntry(entry.id);
-                      }}
-                    >
-                      <Button type="submit" tone="destructive" size="xs">
-                        Revert
-                      </Button>
-                    </form>
-                  )}
-                </div>
-                {entry.summary && <p className="mt-1 text-parchment/85">{entry.summary}</p>}
-                {afterRows.length > 0 && (
-                  <p className="mt-1 font-mono text-xs text-parchment/50">
-                    {afterRows.map((row) => `${row.label}: ${row.text}`).join(" - ")}
+                      <form
+                        action={async (formData: FormData) => {
+                          "use server";
+                          await rejectCorrection(correction.id, formData);
+                        }}
+                        className="flex flex-col gap-2"
+                      >
+                        <Select name="reasonCode" defaultValue="" required>
+                          <option value="" disabled>
+                            Reason for rejecting
+                          </option>
+                          {REMOVE_REASON_CODES.map((code) => (
+                            <option key={code} value={code}>
+                              {REASON_CODE_LABEL[code]}
+                            </option>
+                          ))}
+                        </Select>
+                        <TextArea name="note" placeholder="Optional note" rows={2} />
+                        <Button type="submit" tone="destructive">
+                          Reject
+                        </Button>
+                      </form>
+                    </div>
+                  ))
+                ) : (
+                  <p className="font-label text-xs text-parchment/50">
+                    View only. You don&rsquo;t have permission to act on this ticket.
                   </p>
                 )}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+              </section>
+            )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-base text-parchment">Moderator notes</h2>
-        <p className="text-xs text-parchment/50">
-          Internal only. Never shown on the public map or API.
-        </p>
-        {camera.internalNotes.length === 0 && (
-          <p className="text-sm text-parchment/50">No notes yet.</p>
+            {canActOnCamera && (
+              <section className="flex flex-col gap-2 rounded border border-parchment/10 p-4">
+                <h2 className="font-label text-xs text-amber">CORRECT STATE</h2>
+                <p className="text-xs text-parchment/50">
+                  Overrides the auto-derived state, for a border town or bad coordinates the
+                  automatic derivation got wrong.
+                </p>
+                <form
+                  action={async (formData: FormData) => {
+                    "use server";
+                    await overrideCameraState(camera.id, formData);
+                  }}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <Select name="state" defaultValue={camera.state ?? ""} className="w-auto">
+                    <option value="">Unresolved</option>
+                    {Object.values(AuState)
+                      .sort((a, b) => STATE_LABEL[a].localeCompare(STATE_LABEL[b]))
+                      .map((state) => (
+                        <option key={state} value={state}>
+                          {STATE_LABEL[state]}
+                        </option>
+                      ))}
+                  </Select>
+                  <Button type="submit">Set state</Button>
+                </form>
+              </section>
+            )}
+          </div>
         )}
-        <ol className="flex flex-col gap-2">
-          {camera.internalNotes.map((note) => (
-            <li key={note.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
-              <p className="font-mono text-xs text-parchment/50">
-                {dateFormatter.format(note.createdAt)} - {note.author.name ?? note.author.email ?? "Unknown moderator"}
-              </p>
-              <p className="mt-1 whitespace-pre-wrap text-parchment/85">{note.body}</p>
-            </li>
-          ))}
-        </ol>
 
-        <form
-          action={async (formData: FormData) => {
-            "use server";
-            await addCameraNote(camera.id, formData);
-          }}
-          className="flex flex-col gap-2"
-        >
-          <TextArea
-            name="body"
-            placeholder="Add an internal note (visible to moderators only)"
-            rows={3}
-            maxLength={4000}
-            required
-          />
-          <Button type="submit" className="self-start">
-            Add note
-          </Button>
-        </form>
-      </section>
+        <div className="flex flex-col gap-8 lg:col-start-1 lg:row-start-2">
+          {(camera.photos.length > 0 || camera.correctionReports.some((c) => c.photos.length > 0)) && (
+            <section className="flex flex-col gap-3">
+              <h2 className="font-heading text-base text-parchment">Photo evidence</h2>
+              <div className="flex flex-wrap gap-3">
+                {camera.photos.map((photo, i) => (
+                  <div key={photo.id} className="w-40 rounded border border-parchment/20 p-2">
+                    <a href={`/api/photos/${photo.id}`} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- moderator-only/gated image served from an authenticated route, not a next/image candidate */}
+                      <img
+                        src={`/api/photos/${photo.id}`}
+                        alt={`Submitted photo ${i + 1}`}
+                        className="h-28 w-full rounded object-cover"
+                      />
+                    </a>
+                    <p className="mt-1.5 font-label text-xs text-parchment/70">{formatGpsSignal(photo.gpsDistanceMeters)}</p>
+                    <p className="font-label text-xs text-parchment/70">{formatCapturedAgeSignal(photo.capturedAgeHours)}</p>
+                    <p className="mt-1 font-label text-xs text-amber">{PHOTO_STATUS_LABEL[photo.moderationStatus]}</p>
+                  </div>
+                ))}
+                {camera.correctionReports.flatMap((correction) => correction.photos).map((photo, i) => (
+                  <div key={photo.id} className="w-40 rounded border border-parchment/20 p-2">
+                    <a href={`/api/photos/${photo.id}`} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- moderator-only/gated image served from an authenticated route, not a next/image candidate */}
+                      <img
+                        src={`/api/photos/${photo.id}`}
+                        alt={`Correction photo ${i + 1}`}
+                        className="h-28 w-full rounded object-cover"
+                      />
+                    </a>
+                    <p className="mt-1.5 font-label text-xs text-parchment/70">{formatGpsSignal(photo.gpsDistanceMeters)}</p>
+                    <p className="font-label text-xs text-parchment/70">{formatCapturedAgeSignal(photo.capturedAgeHours)}</p>
+                    <p className="mt-1 font-label text-xs text-amber">Submitted with correction</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="flex flex-col gap-4">
+            <CollapsibleSection title="History" defaultOpen>
+              {camera.history.length === 0 && (
+                <p className="text-sm text-parchment/50">No history events yet.</p>
+              )}
+              <ol className="flex flex-col gap-2">
+                {camera.history.map((event) => (
+                  <li key={event.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-parchment/50">
+                      {dateFormatter.format(event.date)} - {HISTORY_EVENT_LABEL[event.eventType]}
+                    </p>
+                    {event.note && <p className="mt-1 text-parchment/85">{event.note}</p>}
+                  </li>
+                ))}
+              </ol>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Moderation actions">
+              {camera.moderationActions.length === 0 && (
+                <p className="text-sm text-parchment/50">No moderator decisions yet.</p>
+              )}
+              <ol className="flex flex-col gap-2">
+                {camera.moderationActions.map((action) => (
+                  <li key={action.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-parchment/50">
+                      {dateFormatter.format(action.createdAt)} - {ACTION_TYPE_LABEL[action.action]} by{" "}
+                      {action.actor.name ?? action.actor.email ?? "Unknown moderator"} ({REASON_CODE_LABEL[action.reasonCode]})
+                      {action.auditLogEntry?.revertedAt && (
+                        <Badge tone="error" className="ml-2">
+                          REVERTED
+                        </Badge>
+                      )}
+                    </p>
+                    {action.note && <p className="mt-1 text-parchment/85">{action.note}</p>}
+                  </li>
+                ))}
+              </ol>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Audit log">
+              {auditLog.length === 0 && <p className="text-sm text-parchment/50">No audit entries yet.</p>}
+              <ol className="flex flex-col gap-2">
+                {auditLog.map((entry) => {
+                  const afterRows = formatAuditPayload(entry.after);
+                  const isHead = headEntryIdByEntity.get(`${entry.entityType}:${entry.entityId}`) === entry.id;
+                  return (
+                    <li key={entry.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-label text-xs text-parchment/50">
+                          {dateTimeFormatter.format(entry.createdAt)} - {AUDIT_ACTION_LABEL[entry.action]} by{" "}
+                          {entry.actor.name ?? entry.actor.email ?? "Unknown"}
+                          {entry.revertedAt && (
+                            <Badge tone="error" className="ml-2">
+                              REVERTED
+                            </Badge>
+                          )}
+                        </p>
+                        {isAdmin && isHead && entry.revertedAt === null && (
+                          <form
+                            action={async () => {
+                              "use server";
+                              await revertAuditLogEntry(entry.id);
+                            }}
+                          >
+                            <Button type="submit" tone="destructive" size="xs">
+                              Revert
+                            </Button>
+                          </form>
+                        )}
+                      </div>
+                      {entry.summary && <p className="mt-1 text-parchment/85">{entry.summary}</p>}
+                      {afterRows.length > 0 && (
+                        <p className="mt-1 font-label text-xs text-parchment/50">
+                          {afterRows.map((row) => `${row.label}: ${row.text}`).join(" - ")}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Moderator notes" defaultOpen>
+              {camera.internalNotes.length === 0 && (
+                <p className="text-sm text-parchment/50">No notes yet.</p>
+              )}
+              <ol className="flex flex-col gap-2">
+                {camera.internalNotes.map((note) => (
+                  <li key={note.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-parchment/50">
+                      {dateFormatter.format(note.createdAt)} - {note.author.name ?? note.author.email ?? "Unknown moderator"}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-parchment/85">{note.body}</p>
+                  </li>
+                ))}
+              </ol>
+
+              <form
+                action={async (formData: FormData) => {
+                  "use server";
+                  await addCameraNote(camera.id, formData);
+                }}
+                className="flex flex-col gap-2"
+              >
+                <TextArea
+                  name="body"
+                  placeholder="Add an internal note (visible to moderators only)"
+                  rows={3}
+                  maxLength={4000}
+                  required
+                />
+                <Button type="submit" className="self-start">
+                  Add note
+                </Button>
+              </form>
+            </CollapsibleSection>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

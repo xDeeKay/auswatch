@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/moderator-access";
 import { deactivateModerator } from "@/lib/actions/admin-moderators";
 import { Button } from "@/components/ui/Button";
+
+export const metadata: Metadata = {
+  title: "AusWatch - Remove moderator",
+};
 
 export default async function RemoveModeratorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

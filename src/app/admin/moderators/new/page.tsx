@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ModeratorRole } from "@/generated/prisma/enums";
 import { requireAdmin } from "@/lib/moderator-access";
@@ -7,6 +8,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Label, Select, TextInput } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+
+export const metadata: Metadata = {
+  title: "AusWatch - Add moderator",
+};
 
 export default async function NewModeratorPage() {
   const access = await requireAdmin();

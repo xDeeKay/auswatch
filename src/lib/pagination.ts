@@ -28,18 +28,3 @@ export function parsePageParams(
   const pageSize = Math.min(requestedPageSize, options.maxPageSize);
   return { page, pageSize };
 }
-
-export function paginate<T>(items: T[], { page, pageSize }: PageParams): PaginatedResult<T> {
-  const total = items.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const clampedPage = Math.min(Math.max(page, 1), totalPages);
-  const start = (clampedPage - 1) * pageSize;
-
-  return {
-    items: items.slice(start, start + pageSize),
-    page: clampedPage,
-    pageSize,
-    total,
-    totalPages,
-  };
-}

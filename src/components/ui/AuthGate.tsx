@@ -26,7 +26,7 @@ export function AuthGate({
 
   return (
     <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-6 py-20 text-center">
-      <p className="font-mono text-xs tracking-[0.3em] text-parchment/50">AUSWATCH</p>
+      <p className="font-label text-xs text-parchment/50">AusWatch</p>
       <h1 className="font-heading text-lg text-parchment">{copy.title}</h1>
       {copy.body && <p className="text-sm text-parchment/70">{copy.body}</p>}
       <Button href="/moderate/sign-in">Go to sign in</Button>

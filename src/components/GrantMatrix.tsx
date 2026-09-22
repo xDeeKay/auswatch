@@ -40,8 +40,8 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
     <div className="overflow-x-auto rounded border border-parchment/10">
       <table className="w-full min-w-[640px] text-sm">
         <thead>
-          <tr className="text-left font-mono text-xs tracking-[0.05em] text-amber">
-            <th className="p-2">STATE</th>
+          <tr className="text-left font-label text-xs text-amber">
+            <th className="p-2">STATE/TERRITORY</th>
             {Object.values(CameraType).map((cameraType) => (
               <th key={cameraType} className="p-2 text-center">
                 {TYPE_LABEL[cameraType]}
@@ -60,7 +60,7 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
                 return (
                   <td key={key} className="p-2 text-center">
                     <div className="flex flex-col items-center gap-1">
-                      <label className="flex items-center gap-1 font-mono text-[10px] text-parchment/60">
+                      <label className="flex items-center gap-1 font-label text-[10px] text-parchment/60">
                         <input
                           ref={(el) => {
                             viewRefs.current[key] = el;
@@ -77,7 +77,7 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
                         />
                         View
                       </label>
-                      <label className="flex items-center gap-1 font-mono text-[10px] text-parchment/60">
+                      <label className="flex items-center gap-1 font-label text-[10px] text-parchment/60">
                         <input
                           ref={(el) => {
                             actRefs.current[key] = el;
@@ -103,14 +103,14 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
                   <button
                     type="button"
                     onClick={() => setRow(state, "act", true)}
-                    className="font-mono text-[10px] text-parchment/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
+                    className="font-label text-[10px] text-parchment/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
                   >
                     All act
                   </button>
                   <button
                     type="button"
                     onClick={() => setRow(state, "view", false)}
-                    className="font-mono text-[10px] text-parchment/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
+                    className="font-label text-[10px] text-parchment/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
                   >
                     Clear row
                   </button>

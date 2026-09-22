@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AuditActionType, AuditEntityType } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/moderator-access";
 import { listAuditLogEntries, type AuditLogFilters } from "@/lib/audit-log-query";
+import { AUDIT_ENTITY_BY_ACTION } from "@/lib/audit-log-payloads";
 import { parsePageParams } from "@/lib/pagination";
 import { AUDIT_ACTION_LABEL, AUDIT_ENTITY_LABEL } from "@/lib/audit-labels";
 import { formatAuditPayload } from "@/lib/audit-log-format";
@@ -13,6 +15,10 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Label, Select } from "@/components/ui/Field";
 import { DiffTable } from "@/components/ui/DiffTable";
+
+export const metadata: Metadata = {
+  title: "AusWatch - Audit log",
+};
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -52,10 +58,27 @@ function buildQueryString(params: Record<string, string | undefined>): string {
   return new URLSearchParams(entries).toString();
 }
 
+/**
+ * Groups the action filter's options for display. Mirrors AUDIT_ENTITY_BY_ACTION
+ * (the entity each action is actually logged against, used for querying and
+ * linking), except camera_correction_approve reads as a correction action to a
+ * moderator even though it's logged against the camera entity, since approving
+ * a correction is what changes the camera's fields.
+ */
+const FILTER_GROUP_BY_ACTION: Record<AuditActionType, AuditEntityType> = {
+  ...AUDIT_ENTITY_BY_ACTION,
+  camera_correction_approve: AuditEntityType.correction_report,
+};
+
+const ACTIONS_BY_ENTITY = Object.values(AuditEntityType).map((entityType) => ({
+  entityType,
+  actions: Object.values(AuditActionType).filter((action) => FILTER_GROUP_BY_ACTION[action] === entityType),
+}));
+
 export default async function AuditLogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ entityType?: string; action?: string; actorId?: string; page?: string }>;
+  searchParams: Promise<{ action?: string; actorId?: string; page?: string }>;
 }) {
   const access = await requireAdmin();
   if (access.status !== "ok") return null;
@@ -63,9 +86,6 @@ export default async function AuditLogPage({
   const params = await searchParams;
 
   const filters: AuditLogFilters = {};
-  if (params.entityType && (Object.values(AuditEntityType) as string[]).includes(params.entityType)) {
-    filters.entityType = params.entityType as AuditEntityType;
-  }
   if (params.action && (Object.values(AuditActionType) as string[]).includes(params.action)) {
     filters.action = params.action as AuditActionType;
   }
@@ -78,6 +98,33 @@ export default async function AuditLogPage({
     listAuditLogEntries(filters, pageParams),
     prisma.moderatorProfile.findMany({ include: { user: true }, orderBy: { email: "asc" } }),
   ]);
+
+  // Revert eligibility is per-entity (see assertRevertable in
+  // audit-log-revert.ts: only an entity's single most recent unreverted
+  // entry can be reverted, to force reverts to happen in order). This page
+  // is a paginated, filterable view across every entity, so "first row on
+  // this page" isn't a safe stand-in for "most recent overall" the way it is
+  // on a single camera's own history - a page/filter can easily show an
+  // entity's older entry without its true, newer head anywhere in view. Look
+  // each involved entity's real head up directly instead.
+  const uniqueEntities = new Map<string, { entityType: AuditEntityType; entityId: string }>();
+  for (const entry of result.items) {
+    const key = `${entry.entityType}:${entry.entityId}`;
+    if (!uniqueEntities.has(key)) uniqueEntities.set(key, { entityType: entry.entityType, entityId: entry.entityId });
+  }
+  const headRows =
+    uniqueEntities.size > 0
+      ? await prisma.auditLogEntry.findMany({
+          where: { OR: Array.from(uniqueEntities.values()) },
+          select: { id: true, entityType: true, entityId: true },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        })
+      : [];
+  const headEntryIdByEntity = new Map<string, string>();
+  for (const row of headRows) {
+    const key = `${row.entityType}:${row.entityId}`;
+    if (!headEntryIdByEntity.has(key)) headEntryIdByEntity.set(key, row.id);
+  }
 
   const rangeStart = result.total === 0 ? 0 : (result.page - 1) * result.pageSize + 1;
   const rangeEnd = Math.min(result.page * result.pageSize, result.total);
@@ -96,29 +143,22 @@ export default async function AuditLogPage({
 
       <form method="get" className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <Label>ENTITY</Label>
-          <Select name="entityType" defaultValue={params.entityType ?? ""}>
-            <option value="">All entities</option>
-            {Object.values(AuditEntityType).map((type) => (
-              <option key={type} value={type}>
-                {AUDIT_ENTITY_LABEL[type]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1">
           <Label>ACTION</Label>
           <Select name="action" defaultValue={params.action ?? ""}>
             <option value="">All actions</option>
-            {Object.values(AuditActionType).map((action) => (
-              <option key={action} value={action}>
-                {AUDIT_ACTION_LABEL[action]}
-              </option>
+            {ACTIONS_BY_ENTITY.map(({ entityType, actions }) => (
+              <optgroup key={entityType} label={AUDIT_ENTITY_LABEL[entityType]}>
+                {actions.map((action) => (
+                  <option key={action} value={action}>
+                    {AUDIT_ACTION_LABEL[action]}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label>ACTOR</Label>
+          <Label>USER</Label>
           <Select name="actorId" defaultValue={params.actorId ?? ""}>
             <option value="">Everyone</option>
             {actors
@@ -144,18 +184,20 @@ export default async function AuditLogPage({
             after: row.text,
           }));
           const href = entityHref(entry.entityType, entry.entityId, entry.after);
-          const canRevert = entry.revertedAt === null;
+          const canRevert =
+            entry.revertedAt === null &&
+            headEntryIdByEntity.get(`${entry.entityType}:${entry.entityId}`) === entry.id;
 
           return (
             <Card key={entry.id}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone="neutral">{AUDIT_ENTITY_LABEL[entry.entityType]}</Badge>
                     <h2 className="font-heading text-sm text-parchment">{AUDIT_ACTION_LABEL[entry.action]}</h2>
                     {entry.revertedAt && <Badge tone="error">REVERTED</Badge>}
                   </div>
-                  <p className="mt-1 font-mono text-xs text-parchment/50">
+                  <p className="mt-1.5 font-label text-xs text-parchment/50">
                     {dateTimeFormatter.format(entry.createdAt)} by{" "}
                     {entry.actor.name ?? entry.actor.email ?? "Unknown"}
                     {href && (
@@ -171,9 +213,9 @@ export default async function AuditLogPage({
                       </>
                     )}
                   </p>
-                  {entry.summary && <p className="mt-1 text-sm text-parchment/85">{entry.summary}</p>}
+                  {entry.summary && <p className="mt-1 font-label text-xs text-parchment/50">{entry.summary}</p>}
                   {entry.revertedAt && (
-                    <p className="mt-1 font-mono text-xs text-parchment/50">
+                    <p className="mt-1 font-label text-xs text-parchment/50">
                       Reverted {dateTimeFormatter.format(entry.revertedAt)} by{" "}
                       {entry.revertedBy?.name ?? entry.revertedBy?.email ?? "Unknown"}
                     </p>
@@ -203,7 +245,7 @@ export default async function AuditLogPage({
       </div>
 
       {result.totalPages > 1 && (
-        <div className="flex items-center justify-between font-mono text-xs text-parchment/50">
+        <div className="flex items-center justify-between font-label text-xs text-parchment/50">
           {result.page > 1 ? (
             <Link
               href={`?${buildQueryString({ ...params, page: String(result.page - 1) })}`}

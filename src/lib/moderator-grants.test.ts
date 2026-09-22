@@ -116,7 +116,7 @@ describe("summarizeGrants", () => {
       existingGrant({ state: AuState.wa, cameraType: CameraType.speed, canView: true, canAct: true }),
       existingGrant({ state: AuState.nsw, cameraType: CameraType.alpr, canView: true, canAct: false }),
     ]);
-    expect(summary).toContain("Western Australia: Speed camera (view+act)");
-    expect(summary).toContain("New South Wales: ALPR / plate reader (view)");
+    expect(summary).toContain("Western Australia: Speed Camera (view+act)");
+    expect(summary).toContain("New South Wales: ALPR / Plate Reader (view)");
   });
 });

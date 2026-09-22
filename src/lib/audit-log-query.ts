@@ -15,11 +15,7 @@ export type AuditLogEntryWithActor = AuditLogEntryModel & {
   revertedBy: UserModel | null;
 };
 
-/**
- * Paginates at the database level, unlike tickets.ts's listTickets, since the
- * audit log grows unboundedly over the project's lifetime rather than being
- * bounded to a small pending-ticket queue.
- */
+/** Paginates at the database level, since the audit log grows unboundedly over the project's lifetime. */
 export async function listAuditLogEntries(
   filters: AuditLogFilters,
   pageParams: PageParams

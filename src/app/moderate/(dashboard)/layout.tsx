@@ -11,9 +11,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   }
 
   return (
-    <>
+    <div className="flex h-screen flex-col">
       <ModNav role={access.profile.role} userLabel={access.profile.email} />
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-10">{children}</main>
-    </>
+      <div className="flex-1 overflow-y-auto px-6 py-10">
+        <main className="mx-auto flex w-full max-w-5xl flex-col gap-8">{children}</main>
+      </div>
+    </div>
   );
 }

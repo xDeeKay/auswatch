@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AuditEntityType, ModeratorRole } from "@/generated/prisma/enums";
@@ -12,6 +13,10 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Badge } from "@/components/ui/Badge";
 import { Label, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
+
+export const metadata: Metadata = {
+  title: "AusWatch - Edit moderator",
+};
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -91,7 +96,7 @@ export default async function EditModeratorPage({ params }: { params: Promise<{ 
           {history.map((entry) => (
             <li key={entry.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-mono text-xs text-parchment/50">
+                <p className="font-label text-xs text-parchment/50">
                   {dateTimeFormatter.format(entry.createdAt)} - {AUDIT_ACTION_LABEL[entry.action]} by{" "}
                   {entry.actor.name ?? entry.actor.email ?? "Unknown"}
                   {entry.revertedAt && (
@@ -114,7 +119,7 @@ export default async function EditModeratorPage({ params }: { params: Promise<{ 
                 )}
               </div>
               {entry.summary && <p className="mt-1 text-parchment/85">{entry.summary}</p>}
-              <p className="mt-1 font-mono text-xs text-parchment/50">
+              <p className="mt-1 font-label text-xs text-parchment/50">
                 {formatAuditPayload(entry.after)
                   .map((row) => `${row.label}: ${row.text}`)
                   .join(" - ")}

@@ -17,7 +17,7 @@ const SIZE_CLASS: Record<ButtonSize, string> = {
   md: "px-4 py-2 text-sm",
 };
 
-const BASE_CLASS = "inline-block rounded border font-mono transition disabled:cursor-not-allowed disabled:opacity-40";
+const BASE_CLASS = "inline-block rounded border font-label transition disabled:cursor-not-allowed disabled:opacity-40";
 
 type CommonProps = {
   tone?: ButtonTone;
