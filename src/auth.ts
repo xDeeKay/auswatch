@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db";
-import { resolveModeratorSignIn } from "@/lib/moderator-access";
+import { provisionModeratorProfile, resolveModeratorSignIn } from "@/lib/moderator-access";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -18,6 +18,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = user.id;
       }
       return session;
+    },
+  },
+  events: {
+    async signIn({ user }) {
+      if (!user.id) return;
+      await provisionModeratorProfile(user.email, user.id);
     },
   },
   pages: {

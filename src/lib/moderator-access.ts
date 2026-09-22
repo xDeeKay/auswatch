@@ -103,9 +103,10 @@ function parseEmailList(value: string | undefined): string[] {
 }
 
 /**
- * Decides whether a sign-in should be allowed for this email, provisioning or
- * linking the ModeratorProfile as a side effect so an admin can grant access
- * to someone before their first sign-in.
+ * Decides whether a sign-in should be allowed for this email. Read-only: for
+ * a brand-new user, Auth.js calls this before the adapter has persisted the
+ * User row, so `userId` isn't valid as a foreign key yet here. Any write that
+ * needs to reference it belongs in provisionModeratorProfile instead.
  */
 export async function resolveModeratorSignIn(
   email: string | null | undefined,
@@ -118,7 +119,37 @@ export async function resolveModeratorSignIn(
 
   if (!existing) {
     const bootstrapEmails = parseEmailList(process.env.BOOTSTRAP_ADMIN_EMAILS);
-    if (!bootstrapEmails.includes(normalizedEmail)) return false;
+    return bootstrapEmails.includes(normalizedEmail);
+  }
+
+  if (!existing.isActive) return false;
+  if (existing.userId === null) return true;
+  if (existing.userId === userId) return true;
+
+  console.warn(
+    `ModeratorProfile for ${normalizedEmail} is linked to a different userId than the one signing in; denying sign-in.`
+  );
+  return false;
+}
+
+/**
+ * Creates or links the ModeratorProfile row for a sign-in resolveModeratorSignIn
+ * already approved. Must run only after the User row is guaranteed to exist
+ * (Auth.js's events.signIn, not the signIn callback), otherwise the userId
+ * foreign key write fails for anyone's very first sign-in.
+ */
+export async function provisionModeratorProfile(
+  email: string | null | undefined,
+  userId: string
+): Promise<void> {
+  if (!email) return;
+  const normalizedEmail = normalizeModeratorEmail(email);
+
+  const existing = await prisma.moderatorProfile.findUnique({ where: { email: normalizedEmail } });
+
+  if (!existing) {
+    const bootstrapEmails = parseEmailList(process.env.BOOTSTRAP_ADMIN_EMAILS);
+    if (!bootstrapEmails.includes(normalizedEmail)) return;
 
     await prisma.moderatorProfile.create({
       data: {
@@ -128,23 +159,13 @@ export async function resolveModeratorSignIn(
         isActive: true,
       },
     });
-    return true;
+    return;
   }
-
-  if (!existing.isActive) return false;
 
   if (existing.userId === null) {
     await prisma.moderatorProfile.update({
       where: { id: existing.id },
       data: { userId },
     });
-    return true;
   }
-
-  if (existing.userId === userId) return true;
-
-  console.warn(
-    `ModeratorProfile for ${normalizedEmail} is linked to a different userId than the one signing in; denying sign-in.`
-  );
-  return false;
 }

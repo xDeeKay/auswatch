@@ -30,6 +30,7 @@ const {
   requireAdmin,
   getModeratorProfile,
   resolveModeratorSignIn,
+  provisionModeratorProfile,
   normalizeModeratorEmail,
   accessDeniedMessage,
 } = await import("./moderator-access");
@@ -233,16 +234,14 @@ describe("resolveModeratorSignIn", () => {
     expect(await resolveModeratorSignIn("", "user-1")).toBe(false);
   });
 
-  it("creates an unrestricted admin profile on first sign-in when bootstrap-listed and no profile exists", async () => {
+  it("allows first sign-in when bootstrap-listed and no profile exists, without writing anything yet", async () => {
     process.env.BOOTSTRAP_ADMIN_EMAILS = "admin@example.com";
     findUniqueMock.mockResolvedValue(null);
 
     const allowed = await resolveModeratorSignIn("Admin@Example.com", "user-1");
 
     expect(allowed).toBe(true);
-    expect(createMock).toHaveBeenCalledWith({
-      data: { email: "admin@example.com", userId: "user-1", role: ModeratorRole.admin, isActive: true },
-    });
+    expect(createMock).not.toHaveBeenCalled();
   });
 
   it("denies sign-in when no profile exists and the email is not bootstrap-listed", async () => {
@@ -258,13 +257,13 @@ describe("resolveModeratorSignIn", () => {
     expect(await resolveModeratorSignIn("mod@example.com", "user-1")).toBe(false);
   });
 
-  it("links userId and allows sign-in for a pre-provisioned profile with no linked user yet", async () => {
+  it("allows sign-in for a pre-provisioned profile with no linked user yet, without writing anything yet", async () => {
     findUniqueMock.mockResolvedValue(profile({ userId: null }));
 
     const allowed = await resolveModeratorSignIn("mod@example.com", "user-1");
 
     expect(allowed).toBe(true);
-    expect(updateMock).toHaveBeenCalledWith({ where: { id: "profile-1" }, data: { userId: "user-1" } });
+    expect(updateMock).not.toHaveBeenCalled();
   });
 
   it("allows sign-in when userId already matches, without writing anything", async () => {
@@ -282,6 +281,70 @@ describe("resolveModeratorSignIn", () => {
     const allowed = await resolveModeratorSignIn("mod@example.com", "user-1");
 
     expect(allowed).toBe(false);
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("provisionModeratorProfile", () => {
+  const ORIGINAL_ENV = process.env.BOOTSTRAP_ADMIN_EMAILS;
+
+  beforeEach(() => {
+    findUniqueMock.mockReset();
+    createMock.mockReset();
+    updateMock.mockReset();
+  });
+
+  afterEach(() => {
+    process.env.BOOTSTRAP_ADMIN_EMAILS = ORIGINAL_ENV;
+  });
+
+  it("does nothing for a null/empty email", async () => {
+    await provisionModeratorProfile(null, "user-1");
+    await provisionModeratorProfile("", "user-1");
+    expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("creates an unrestricted admin profile once bootstrap-listed and no profile exists", async () => {
+    process.env.BOOTSTRAP_ADMIN_EMAILS = "admin@example.com";
+    findUniqueMock.mockResolvedValue(null);
+
+    await provisionModeratorProfile("Admin@Example.com", "user-1");
+
+    expect(createMock).toHaveBeenCalledWith({
+      data: { email: "admin@example.com", userId: "user-1", role: ModeratorRole.admin, isActive: true },
+    });
+  });
+
+  it("does not create a profile when the email is not bootstrap-listed", async () => {
+    process.env.BOOTSTRAP_ADMIN_EMAILS = "someone-else@example.com";
+    findUniqueMock.mockResolvedValue(null);
+
+    await provisionModeratorProfile("nobody@example.com", "user-1");
+
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("links userId for a pre-provisioned profile with no linked user yet", async () => {
+    findUniqueMock.mockResolvedValue(profile({ userId: null }));
+
+    await provisionModeratorProfile("mod@example.com", "user-1");
+
+    expect(updateMock).toHaveBeenCalledWith({ where: { id: "profile-1" }, data: { userId: "user-1" } });
+  });
+
+  it("does not write anything when userId already matches", async () => {
+    findUniqueMock.mockResolvedValue(profile({ userId: "user-1" }));
+
+    await provisionModeratorProfile("mod@example.com", "user-1");
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("does not write anything when the profile is linked to a different userId", async () => {
+    findUniqueMock.mockResolvedValue(profile({ userId: "some-other-user" }));
+
+    await provisionModeratorProfile("mod@example.com", "user-1");
+
     expect(updateMock).not.toHaveBeenCalled();
   });
 });
