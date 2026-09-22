@@ -1,12 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   AuState,
+  CameraStatus,
   CameraType,
   CaptureType,
   CorrectionReportStatus,
   HistoryEventType,
   ModerationActionType,
   ModerationReasonCode,
+  OperatorCategory,
   SensitiveSiteMatchSource,
 } from "@/generated/prisma/enums";
 import { buildCorrectionApproveTransition, buildCorrectionRejectTransition } from "./correction-transition";
@@ -17,10 +19,12 @@ const camera: CameraSnapshot & { stateOverride: boolean } = {
   lat: -31.9505,
   lng: 115.8605,
   type: CameraType.alpr,
+  operatorCategory: OperatorCategory.state_police,
   operator: "WA Police",
   captures: CaptureType.plates,
   notes: "Mounted on a light pole.",
   state: AuState.wa,
+  status: CameraStatus.active,
   stateOverride: false,
 };
 
@@ -32,8 +36,10 @@ function pendingCorrection(overrides: Partial<PendingCorrection> = {}): PendingC
     proposedLng: null,
     proposedType: null,
     proposedOperator: null,
+    proposedOperatorCategory: null,
     proposedCaptures: null,
     proposedNotes: null,
+    reportedRemoved: false,
     proposedSensitiveSiteMatches: null,
     proposedSensitiveSiteCheckErrors: null,
     ...overrides,
@@ -58,6 +64,16 @@ describe("buildCorrectionApproveTransition", () => {
       now
     );
     expect(plan.cameraUpdate).toEqual({ operator: "NSW Police" });
+  });
+
+  it("copies operatorCategory when proposed", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedOperatorCategory: OperatorCategory.local_council }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate).toEqual({ operatorCategory: OperatorCategory.local_council });
   });
 
   it("sets lat, lng, and the re-derived state together for a location-only correction", () => {
@@ -169,6 +185,8 @@ describe("buildCorrectionApproveTransition", () => {
             source: SensitiveSiteMatchSource.osm_overpass,
             category: null,
             distanceMeters: 40,
+            lat: -31.9601,
+            lng: 115.8701,
             detail: "kindergarten",
           },
         ],
@@ -212,7 +230,7 @@ describe("buildCorrectionApproveTransition", () => {
       now
     );
     expect(plan.historyEvent?.note).toBe(
-      'Type corrected from "ALPR / plate reader" to "CCTV"; Operator corrected from "WA Police" to "NSW Police"'
+      'Type corrected from "ALPR / Plate Reader" to "CCTV Camera"; Operator corrected from "WA Police" to "NSW Police"'
     );
   });
 
@@ -272,6 +290,40 @@ describe("buildCorrectionApproveTransition", () => {
       summary: 'Operator corrected from "WA Police" to "NSW Police"',
       moderationActionId: input.moderationActionId,
     });
+  });
+
+  it("sets status to removed when the correction reports the camera removed", () => {
+    const plan = buildCorrectionApproveTransition(pendingCorrection({ reportedRemoved: true }), camera, input, now);
+    expect(plan.cameraUpdate).toEqual({ status: CameraStatus.removed });
+  });
+
+  it("uses the removed HistoryEventType and notes the status change when reporting a removal", () => {
+    const plan = buildCorrectionApproveTransition(pendingCorrection({ reportedRemoved: true }), camera, input, now);
+    expect(plan.historyEvent?.eventType).toBe(HistoryEventType.removed);
+    expect(plan.historyEvent?.note).toBe('Status corrected from "Active" to "Removed"');
+  });
+
+  it("does not touch status when the camera is already removed", () => {
+    const alreadyRemovedCamera = { ...camera, status: CameraStatus.removed };
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ reportedRemoved: true }),
+      alreadyRemovedCamera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate).not.toHaveProperty("status");
+    expect(plan.historyEvent).toBeUndefined();
+  });
+
+  it("combines a removal with other proposed field changes in one history event", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ reportedRemoved: true, proposedOperator: "NSW Police" }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate).toEqual({ status: CameraStatus.removed, operator: "NSW Police" });
+    expect(plan.historyEvent?.eventType).toBe(HistoryEventType.removed);
   });
 
   it("audit entry before/after includes stateOverride when the location changed", () => {
