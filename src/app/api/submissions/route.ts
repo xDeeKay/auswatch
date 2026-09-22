@@ -128,7 +128,8 @@ export async function POST(request: Request) {
     });
 
     return acceptedResponse(currentToken);
-  } catch {
+  } catch (err) {
+    console.error("Submission failed:", err);
     return NextResponse.json(
       { status: "error", message: "Something went wrong. Please try again." },
       {
