@@ -1,5 +1,14 @@
 import type { Config } from "tailwindcss";
 
+// Tailwind accepts a function here for opacity-aware CSS-variable colors at
+// runtime, even though its own Config type only declares plain strings.
+function withOpacity(rgbVariable: string): string {
+  return ((({ opacityValue }: { opacityValue?: string }) =>
+    opacityValue === undefined
+      ? `rgb(var(${rgbVariable}))`
+      : `rgb(var(${rgbVariable}) / ${opacityValue})`) as unknown) as string;
+}
+
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
@@ -7,7 +16,7 @@ const config: Config = {
       colors: {
         ink: "#12181D",
         parchment: "#E9E4D8",
-        amber: "#D9A441",
+        amber: withOpacity("--color-accent-rgb"),
         status: {
           active: "#C1443D",
           removed: "#5B8266",
@@ -18,7 +27,7 @@ const config: Config = {
       fontFamily: {
         heading: ["var(--font-heading)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
-        mono: ["var(--font-mono)", "monospace"],
+        label: ["var(--font-body)", "sans-serif"],
       },
     },
   },

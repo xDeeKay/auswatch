@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
 const heading = Space_Grotesk({
@@ -15,13 +15,6 @@ const body = IBM_Plex_Sans({
   display: "swap",
 });
 
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-mono",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: "AusWatch",
   description:
@@ -34,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${heading.variable} ${body.variable} ${mono.variable} font-body`}
+        className={`${heading.variable} ${body.variable} font-body`}
       >
         {children}
       </body>
