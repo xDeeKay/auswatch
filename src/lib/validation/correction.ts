@@ -9,6 +9,7 @@ export const correctionSchema = submissionSchema.extend({
   // to "" - an omitted field would otherwise read as "clear this field."
   operator: z.string().trim().max(120),
   notes: z.string().trim().max(2000),
+  reportedRemoved: z.boolean().default(false),
 });
 
 export type ValidatedCorrection = z.infer<typeof correctionSchema>;

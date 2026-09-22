@@ -73,8 +73,10 @@ export async function approveCorrection(
           proposedLng: correction.proposedLng,
           proposedType: correction.proposedType,
           proposedOperator: correction.proposedOperator,
+          proposedOperatorCategory: correction.proposedOperatorCategory,
           proposedCaptures: correction.proposedCaptures,
           proposedNotes: correction.proposedNotes,
+          reportedRemoved: correction.reportedRemoved,
           proposedSensitiveSiteMatches:
             correction.proposedSensitiveSiteMatches as SensitiveSiteMatchResult[] | null,
           proposedSensitiveSiteCheckErrors:

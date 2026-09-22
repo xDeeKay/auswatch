@@ -3,23 +3,11 @@
 import { useState } from "react";
 import LocationPicker from "@/components/LocationPicker";
 import type { LatLng } from "@/components/LocationPickerView";
-import { CameraType, CaptureType } from "@/generated/prisma/enums";
-import { TYPE_LABEL, CAPTURE_LABEL } from "@/lib/camera-labels";
+import { CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/enums";
+import { TYPE_LABEL, TYPE_ORDER, CAPTURE_LABEL, CAPTURE_ORDER, OPERATOR_CATEGORY_LABEL, OPERATOR_NAME_PROMPT } from "@/lib/camera-labels";
+import { PhotoPicker } from "@/components/PhotoPicker";
 
-const OPERATOR_SUGGESTIONS = [
-  "WA Police",
-  "NSW Police",
-  "Victoria Police",
-  "Queensland Police",
-  "SA Police",
-  "NT Police",
-  "Local council",
-  "State government",
-  "Private operator",
-  "Unknown",
-];
-
-const fieldLabel = "font-mono text-xs tracking-[0.05em] text-amber";
+const fieldLabel = "font-label text-xs text-amber";
 const inputClass =
   "w-full rounded border border-parchment/20 bg-transparent px-3 py-2 text-sm text-parchment placeholder:text-parchment/30 focus:border-amber focus:outline-none";
 
@@ -27,35 +15,44 @@ type SubmitState = "idle" | "submitting" | "done" | "error";
 
 export default function SubmissionForm() {
   const [type, setType] = useState<CameraType | "">("");
+  const [operatorCategory, setOperatorCategory] = useState<OperatorCategory | "">("");
   const [operator, setOperator] = useState("");
   const [captures, setCaptures] = useState<CaptureType | "">("");
   const [notes, setNotes] = useState("");
   const [location, setLocation] = useState<LatLng | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
   const [state, setState] = useState<SubmitState>("idle");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-  const canSubmit = type !== "" && captures !== "" && location !== null && state !== "submitting";
+  const namePrompt = operatorCategory === "" ? undefined : OPERATOR_NAME_PROMPT[operatorCategory];
+
+  const canSubmit =
+    type !== "" && operatorCategory !== "" && captures !== "" && location !== null && state !== "submitting";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!location || type === "" || captures === "") return;
+    if (!location || type === "" || operatorCategory === "" || captures === "") return;
 
     setState("submitting");
     setFieldErrors({});
 
     try {
-      const res = await fetch("/api/submissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const formData = new FormData();
+      formData.set(
+        "payload",
+        JSON.stringify({
           lat: location.lat,
           lng: location.lng,
           type,
+          operatorCategory,
           operator,
           captures,
           notes,
-        }),
-      });
+        })
+      );
+      for (const photo of photos) formData.append("photo", photo);
+
+      const res = await fetch("/api/submissions", { method: "POST", body: formData });
 
       if (res.status === 400) {
         const body = await res.json();
@@ -77,7 +74,7 @@ export default function SubmissionForm() {
 
   if (state === "done") {
     return (
-      <div className="rounded border border-amber/30 bg-amber/5 p-6">
+      <div className="mx-auto max-w-xl rounded border border-amber/30 bg-amber/5 p-6">
         <p className="font-heading text-lg text-parchment">Submission received</p>
         <p className="mt-2 text-sm text-parchment/70">
           Thank you. Your report is now in the review queue. It will not appear on the
@@ -88,11 +85,11 @@ export default function SubmissionForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="mx-auto flex max-w-xl flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <label className={fieldLabel} htmlFor="type">
-            TYPE
+            CAMERA TYPE
           </label>
           <select
             id="type"
@@ -104,7 +101,7 @@ export default function SubmissionForm() {
             <option value="" disabled>
               Select a type
             </option>
-            {Object.values(CameraType).map((t) => (
+            {TYPE_ORDER.map((t) => (
               <option key={t} value={t}>
                 {TYPE_LABEL[t]}
               </option>
@@ -127,7 +124,7 @@ export default function SubmissionForm() {
             <option value="" disabled>
               Select what it appears to capture
             </option>
-            {Object.values(CaptureType).map((c) => (
+            {CAPTURE_ORDER.map((c) => (
               <option key={c} value={c}>
                 {CAPTURE_LABEL[c]}
               </option>
@@ -140,24 +137,45 @@ export default function SubmissionForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className={fieldLabel} htmlFor="operator">
-          OPERATOR (IF KNOWN)
+        <label className={fieldLabel} htmlFor="operatorCategory">
+          OPERATOR CATEGORY
         </label>
-        <input
-          id="operator"
-          list="operator-suggestions"
+        <select
+          id="operatorCategory"
           className={inputClass}
-          value={operator}
-          onChange={(e) => setOperator(e.target.value)}
-          placeholder="e.g. Local council, WA Police, Unknown"
-          maxLength={120}
-        />
-        <datalist id="operator-suggestions">
-          {OPERATOR_SUGGESTIONS.map((s) => (
-            <option key={s} value={s} />
+          value={operatorCategory}
+          onChange={(e) => setOperatorCategory(e.target.value as OperatorCategory)}
+          required
+        >
+          <option value="" disabled>
+            Select a category
+          </option>
+          {Object.values(OperatorCategory).map((c) => (
+            <option key={c} value={c}>
+              {OPERATOR_CATEGORY_LABEL[c]}
+            </option>
           ))}
-        </datalist>
+        </select>
+        {fieldErrors.operatorCategory && (
+          <p className="text-xs text-error">{fieldErrors.operatorCategory[0]}</p>
+        )}
       </div>
+
+      {namePrompt && (
+        <div className="flex flex-col gap-1.5">
+          <label className={fieldLabel} htmlFor="operator">
+            {namePrompt.label}
+          </label>
+          <input
+            id="operator"
+            className={inputClass}
+            value={operator}
+            onChange={(e) => setOperator(e.target.value)}
+            placeholder={namePrompt.placeholder}
+            maxLength={120}
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <label className={fieldLabel} htmlFor="notes">
@@ -180,6 +198,8 @@ export default function SubmissionForm() {
         </div>
       </div>
 
+      <PhotoPicker photos={photos} onChange={setPhotos} error={fieldErrors.photos?.[0]} />
+
       {state === "error" && (
         <p className="text-sm text-error">
           Something went wrong. Please try again.
@@ -189,7 +209,7 @@ export default function SubmissionForm() {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="rounded border border-amber bg-amber/10 px-4 py-2 font-mono text-sm text-amber transition hover:bg-amber/20 disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded border border-amber bg-amber/10 px-4 py-2 font-label text-sm text-amber transition hover:bg-amber/20 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {state === "submitting" ? "Submitting…" : "Submit report"}
       </button>

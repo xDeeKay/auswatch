@@ -11,6 +11,7 @@ export function buildCameraCreateData(
     lng: input.lng,
     type: input.type,
     operator: input.operator,
+    operatorCategory: input.operatorCategory,
     captures: input.captures,
     notes: input.notes,
     reporterId: reporterToken,

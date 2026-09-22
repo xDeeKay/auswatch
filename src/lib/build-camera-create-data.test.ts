@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { buildCameraCreateData } from "./build-camera-create-data";
-import { CameraType, CaptureType, AuState } from "@/generated/prisma/enums";
+import { CameraType, CaptureType, AuState, OperatorCategory } from "@/generated/prisma/enums";
 import type { ValidatedSubmission } from "@/lib/validation/submission";
 
 const baseInput: ValidatedSubmission = {
   lat: -31.9505,
   lng: 115.8605,
   type: CameraType.alpr,
+  operatorCategory: OperatorCategory.state_police,
   operator: "WA Police",
   captures: CaptureType.plates,
   notes: "Test note",
@@ -19,6 +20,7 @@ describe("buildCameraCreateData", () => {
       lat: -31.9505,
       lng: 115.8605,
       type: CameraType.alpr,
+      operatorCategory: OperatorCategory.state_police,
       operator: "WA Police",
       captures: CaptureType.plates,
       notes: "Test note",
