@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { haversineMeters } from "@/lib/geo";
+import { haversineMeters, computeBoundingBox, type BoundingBox } from "@/lib/geo";
 import { requireEnvNumber } from "@/lib/required-env";
 import { SensitiveZoneCategory, SensitiveSiteMatchSource } from "@/generated/prisma/enums";
 
@@ -9,6 +9,8 @@ export type SensitiveSiteMatchResult = {
   source: SensitiveSiteMatchSource;
   category: SensitiveZoneCategory | null;
   distanceMeters: number | null;
+  lat: number | null;
+  lng: number | null;
   zoneId?: string;
   detail: string;
 };
@@ -41,6 +43,8 @@ export function matchZones(point: Point, zones: ZoneRow[]): SensitiveSiteMatchRe
         source: SensitiveSiteMatchSource.manual_zone,
         category: zone.category,
         distanceMeters,
+        lat: zone.lat,
+        lng: zone.lng,
         zoneId: zone.id,
         detail: "",
       });
@@ -81,8 +85,6 @@ export function mapOsmTagsToCategory(tags: Record<string, string>): SensitiveZon
   return null;
 }
 
-const OVERPASS_QUERY_TIMEOUT_SECONDS = 10;
-
 type OverpassElement = {
   lat?: number;
   lon?: number;
@@ -90,80 +92,144 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
-function buildOverpassQuery(point: Point, radiusMeters: number): string {
-  const around = `around:${radiusMeters},${point.lat},${point.lng}`;
+// Live submissions and corrections match against a locally cached copy of
+// this data (see checkOsmCache below and sensitive-site-cache-refresh.ts)
+// rather than querying Overpass inline, since sensitive sites don't move
+// day to day and a live per-submission query both hammers the shared public
+// API and blocks the submit response on its latency. fetchOsmFeaturesInBbox
+// is the shared fetch used both by the ACT bulk import and the scheduled
+// cache refresh; matching against the returned feature list then happens
+// locally per point, the same way matchZones already does for SensitiveZone.
+export type OsmSensitiveFeature = {
+  lat: number;
+  lng: number;
+  category: SensitiveZoneCategory;
+  detail: string;
+};
+
+const BBOX_QUERY_TIMEOUT_SECONDS = 180;
+
+function buildOverpassBboxQuery(bbox: BoundingBox): string {
+  const box = `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`;
   return `
-    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_SECONDS}];
+    [out:json][timeout:${BBOX_QUERY_TIMEOUT_SECONDS}];
     (
-      node(${around})[amenity~"^(school|kindergarten|childcare|embassy|prison|courthouse)$"];
-      way(${around})[amenity~"^(school|kindergarten|childcare|embassy|prison|courthouse)$"];
-      node(${around})[landuse=military];
-      way(${around})[landuse=military];
-      node(${around})[military];
-      way(${around})[military];
-      node(${around})[diplomatic];
-      way(${around})[diplomatic];
+      node["amenity"~"^(school|kindergarten|childcare|embassy|prison|courthouse)$"](${box});
+      way["amenity"~"^(school|kindergarten|childcare|embassy|prison|courthouse)$"](${box});
+      node["landuse"="military"](${box});
+      way["landuse"="military"](${box});
+      node["military"](${box});
+      way["military"](${box});
+      node["diplomatic"](${box});
+      way["diplomatic"](${box});
     );
     out center tags;
   `.trim();
 }
 
-export async function checkOsmOverpass(
-  point: Point
-): Promise<{ matches: SensitiveSiteMatchResult[]; error: string | null }> {
-  try {
-    const radiusMeters = requireEnvNumber("OSM_SENSITIVE_SITE_CHECK_RADIUS_METERS");
-    const timeoutMs = requireEnvNumber("OVERPASS_TIMEOUT_MS");
+export async function fetchOsmFeaturesInBbox(bbox: BoundingBox): Promise<OsmSensitiveFeature[]> {
+  const timeoutMs = requireEnvNumber("OVERPASS_TIMEOUT_MS");
 
-    const response = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "AusWatch/0.1 (auswatch.org; sensitive-site-check)",
-      },
-      body: `data=${encodeURIComponent(buildOverpassQuery(point, radiusMeters))}`,
-      signal: AbortSignal.timeout(timeoutMs),
+  const response = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "AusWatch/0.1 (auswatch.org; sensitive-site-bulk-check)",
+    },
+    body: `data=${encodeURIComponent(buildOverpassBboxQuery(bbox))}`,
+    signal: AbortSignal.timeout(Math.max(timeoutMs, BBOX_QUERY_TIMEOUT_SECONDS * 1000)),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Overpass bounding-box query failed: ${response.status} ${response.statusText}`);
+  }
+
+  const body = (await response.json()) as { elements?: OverpassElement[] };
+  const elements = body.elements ?? [];
+
+  const features: OsmSensitiveFeature[] = [];
+  for (const element of elements) {
+    const tags = element.tags ?? {};
+    const category = mapOsmTagsToCategory(tags);
+    if (!category) continue;
+
+    const lat = element.lat ?? element.center?.lat;
+    const lng = element.lon ?? element.center?.lon;
+    if (lat === undefined || lng === undefined) continue;
+
+    features.push({
+      lat,
+      lng,
+      category,
+      detail: tags.amenity ?? tags.landuse ?? tags.military ?? tags.diplomatic ?? "",
     });
+  }
 
-    if (!response.ok) {
-      return { matches: [], error: `Overpass responded with ${response.status}` };
-    }
+  return features;
+}
 
-    const body = (await response.json()) as { elements?: OverpassElement[] };
-    const elements = body.elements ?? [];
+export function matchOsmFeatures(
+  point: Point,
+  features: OsmSensitiveFeature[],
+  radiusMeters: number
+): SensitiveSiteMatchResult[] {
+  const matches: SensitiveSiteMatchResult[] = [];
 
-    const matches: SensitiveSiteMatchResult[] = [];
-    for (const element of elements) {
-      const tags = element.tags ?? {};
-      const category = mapOsmTagsToCategory(tags);
-      if (!category) continue;
-
-      const elementLat = element.lat ?? element.center?.lat;
-      const elementLng = element.lon ?? element.center?.lon;
-      const distanceMeters =
-        elementLat !== undefined && elementLng !== undefined
-          ? haversineMeters(point, { lat: elementLat, lng: elementLng })
-          : null;
-
+  for (const feature of features) {
+    const distanceMeters = haversineMeters(point, { lat: feature.lat, lng: feature.lng });
+    if (distanceMeters <= radiusMeters) {
       matches.push({
         source: SensitiveSiteMatchSource.osm_overpass,
-        category,
+        category: feature.category,
         distanceMeters,
-        detail: tags.amenity ?? tags.landuse ?? tags.military ?? tags.diplomatic ?? "",
+        lat: feature.lat,
+        lng: feature.lng,
+        detail: feature.detail,
       });
     }
-
-    return { matches, error: null };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown Overpass error";
-    return { matches: [], error: message };
   }
+
+  return matches;
+}
+
+async function checkOsmCache(
+  point: Point
+): Promise<{ matches: SensitiveSiteMatchResult[]; error: string | null }> {
+  const radiusMeters = requireEnvNumber("OSM_SENSITIVE_SITE_CHECK_RADIUS_METERS");
+  const maxAgeHours = requireEnvNumber("OSM_SENSITIVE_SITE_CACHE_MAX_AGE_HOURS");
+
+  const newest = await prisma.sensitiveSiteOsmCache.findFirst({
+    orderBy: { refreshedAt: "desc" },
+    select: { refreshedAt: true },
+  });
+
+  if (!newest) {
+    return { matches: [], error: "Sensitive-site cache has not been populated yet" };
+  }
+
+  const ageHours = (Date.now() - newest.refreshedAt.getTime()) / (1000 * 60 * 60);
+  if (ageHours > maxAgeHours) {
+    return {
+      matches: [],
+      error: `Sensitive-site cache is stale (last refreshed ${ageHours.toFixed(1)}h ago)`,
+    };
+  }
+
+  const bbox = computeBoundingBox([point], radiusMeters);
+  const rows = await prisma.sensitiveSiteOsmCache.findMany({
+    where: {
+      lat: { gte: bbox.south, lte: bbox.north },
+      lng: { gte: bbox.west, lte: bbox.east },
+    },
+  });
+
+  return { matches: matchOsmFeatures(point, rows, radiusMeters), error: null };
 }
 
 export async function checkSensitiveSite(point: Point): Promise<SensitiveSiteCheckResult> {
   const [manualMatches, osmResult] = await Promise.all([
     checkManualZones(point),
-    checkOsmOverpass(point),
+    checkOsmCache(point),
   ]);
 
   const checkErrors: SensitiveSiteCheckError[] = osmResult.error

@@ -1,18 +1,24 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SensitiveZoneCategory, SensitiveSiteMatchSource } from "@/generated/prisma/enums";
 import { haversineMeters } from "./geo";
 
 const findManyMock = vi.fn();
+const cacheFindFirstMock = vi.fn();
+const cacheFindManyMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     sensitiveZone: {
       findMany: (...args: unknown[]) => findManyMock(...args),
     },
+    sensitiveSiteOsmCache: {
+      findFirst: (...args: unknown[]) => cacheFindFirstMock(...args),
+      findMany: (...args: unknown[]) => cacheFindManyMock(...args),
+    },
   },
 }));
 
-const { matchZones, mapOsmTagsToCategory, checkSensitiveSite } = await import("./sensitive-site-check");
+const { matchZones, mapOsmTagsToCategory, matchOsmFeatures, checkSensitiveSite } = await import("./sensitive-site-check");
 
 describe("matchZones", () => {
   const point = { lat: -31.9505, lng: 115.8605 };
@@ -27,6 +33,8 @@ describe("matchZones", () => {
       source: SensitiveSiteMatchSource.manual_zone,
       category: SensitiveZoneCategory.school,
       zoneId: "z1",
+      lat: -31.9505,
+      lng: 115.8605,
     });
   });
 
@@ -81,6 +89,40 @@ describe("matchZones", () => {
   });
 });
 
+describe("matchOsmFeatures", () => {
+  const point = { lat: -31.9505, lng: 115.8605 };
+
+  it("matches a feature within the radius and reports its distance", () => {
+    const features = [
+      { lat: -31.9505, lng: 115.8605, category: SensitiveZoneCategory.school, detail: "school" },
+    ];
+    const matches = matchOsmFeatures(point, features, 100);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({
+      source: SensitiveSiteMatchSource.osm_overpass,
+      category: SensitiveZoneCategory.school,
+      detail: "school",
+      lat: -31.9505,
+      lng: 115.8605,
+    });
+  });
+
+  it("excludes a feature outside the radius", () => {
+    const features = [
+      { lat: -33.8688, lng: 151.2093, category: SensitiveZoneCategory.school, detail: "school" },
+    ];
+    expect(matchOsmFeatures(point, features, 100)).toHaveLength(0);
+  });
+
+  it("checks each feature against the same radius independently, unlike a single-query bbox fetch", () => {
+    const near = { lat: -31.9505, lng: 115.8605, category: SensitiveZoneCategory.military, detail: "base" };
+    const far = { lat: -33.8688, lng: 151.2093, category: SensitiveZoneCategory.embassy, detail: "embassy" };
+    const matches = matchOsmFeatures(point, [near, far], 100);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.category).toBe(SensitiveZoneCategory.military);
+  });
+});
+
 describe("mapOsmTagsToCategory", () => {
   it("maps amenity=school to school", () => {
     expect(mapOsmTagsToCategory({ amenity: "school" })).toBe(SensitiveZoneCategory.school);
@@ -113,24 +155,21 @@ describe("mapOsmTagsToCategory", () => {
 
 describe("checkSensitiveSite", () => {
   const point = { lat: -31.9505, lng: 115.8605 };
+  const maxAgeHours = Number(process.env.OSM_SENSITIVE_SITE_CACHE_MAX_AGE_HOURS);
 
   beforeEach(() => {
     findManyMock.mockReset();
     findManyMock.mockResolvedValue([]);
+    cacheFindFirstMock.mockReset();
+    cacheFindManyMock.mockReset();
+    cacheFindManyMock.mockResolvedValue([]);
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("records a check_error and never throws when Overpass fails, while manual-zone matches still come through", async () => {
+  it("records a check_error and never throws when the cache has not been populated yet, while manual-zone matches still come through", async () => {
     findManyMock.mockResolvedValue([
       { id: "z1", category: SensitiveZoneCategory.school, lat: point.lat, lng: point.lng, radiusMeters: 100 },
     ]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("network unreachable"))
-    );
+    cacheFindFirstMock.mockResolvedValue(null);
 
     const result = await checkSensitiveSite(point);
 
@@ -140,14 +179,20 @@ describe("checkSensitiveSite", () => {
     expect(result.matches[0]!.source).toBe(SensitiveSiteMatchSource.manual_zone);
   });
 
-  it("returns no matches and no errors when nothing is nearby and Overpass returns empty", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ elements: [] }),
-      })
-    );
+  it("records a check_error when the cache is older than the configured max age", async () => {
+    const tooOld = new Date(Date.now() - (maxAgeHours + 1) * 60 * 60 * 1000);
+    cacheFindFirstMock.mockResolvedValue({ refreshedAt: tooOld });
+
+    const result = await checkSensitiveSite(point);
+
+    expect(result.checkErrors).toHaveLength(1);
+    expect(result.checkErrors[0]!.message).toMatch(/stale/i);
+    expect(result.matches).toHaveLength(0);
+  });
+
+  it("returns no matches and no errors when the cache is fresh and nothing is nearby", async () => {
+    cacheFindFirstMock.mockResolvedValue({ refreshedAt: new Date() });
+    cacheFindManyMock.mockResolvedValue([]);
 
     const result = await checkSensitiveSite(point);
 
@@ -155,23 +200,16 @@ describe("checkSensitiveSite", () => {
     expect(result.checkErrors).toHaveLength(0);
   });
 
-  it("declares a server-side Overpass query timeout well under the client's own abort budget", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ elements: [] }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
+  it("matches a nearby cached feature when the cache is fresh", async () => {
+    cacheFindFirstMock.mockResolvedValue({ refreshedAt: new Date() });
+    cacheFindManyMock.mockResolvedValue([
+      { lat: point.lat, lng: point.lng, category: SensitiveZoneCategory.school, detail: "school" },
+    ]);
 
-    await checkSensitiveSite(point);
+    const result = await checkSensitiveSite(point);
 
-    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const body = requestInit.body as string;
-    const match = /\[out:json\]\[timeout:(\d+)\]/.exec(decodeURIComponent(body));
-    expect(match).not.toBeNull();
-
-    const declaredTimeoutSeconds = Number(match![1]);
-    const clientTimeoutMs = Number(process.env.OVERPASS_TIMEOUT_MS);
-    expect(declaredTimeoutSeconds).toBeGreaterThan(0);
-    expect(declaredTimeoutSeconds * 1000).toBeLessThan(clientTimeoutMs);
+    expect(result.checkErrors).toHaveLength(0);
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0]!.source).toBe(SensitiveSiteMatchSource.osm_overpass);
   });
 });
