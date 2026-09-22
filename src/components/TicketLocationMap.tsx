@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-const Map = dynamic(() => import("./MapExplorer"), {
+const TicketLocationMap = dynamic(() => import("./TicketLocationMapView"), {
   ssr: false,
   loading: () => (
     <div className="flex h-full items-center justify-center font-label text-sm text-parchment/50">
@@ -11,4 +11,4 @@ const Map = dynamic(() => import("./MapExplorer"), {
   ),
 });
 
-export default Map;
+export default TicketLocationMap;

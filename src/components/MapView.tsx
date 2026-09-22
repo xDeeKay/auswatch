@@ -1,24 +1,37 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "./map-theme.css";
-import Link from "next/link";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, Marker, ZoomControl, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import { CameraStatus } from "@/generated/prisma/enums";
+import { CameraStatus, CameraType } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
-import { STATUS_COLOR, STATUS_LABEL, TYPE_LABEL, CAPTURE_LABEL, HISTORY_EVENT_LABEL } from "@/lib/camera-labels";
-import { AUSTRALIA_CENTER, DEFAULT_ZOOM, MIN_ZOOM, DARK_TILE_URL, DARK_TILE_ATTRIBUTION } from "@/lib/map-constants";
+import { TYPE_COLOR } from "@/lib/camera-labels";
+import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM } from "@/lib/map-constants";
+import { VectorBasemap } from "@/components/VectorBasemap";
+import { FitBounds } from "@/components/FitBounds";
+import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
 
-function markerIcon(status: CameraStatus) {
+const FIT_PADDING = { padding: [20, 20] as [number, number] };
+
+const STATUS_SHAPE_CLASS: Record<CameraStatus, string> = {
+  [CameraStatus.active]: "auswatch-marker-solid",
+  [CameraStatus.removed]: "auswatch-marker-hollow",
+  [CameraStatus.unconfirmed]: "auswatch-marker-dashed",
+};
+
+function markerIcon(camera: PublicCamera, selected: boolean) {
+  const color = TYPE_COLOR[camera.type as CameraType];
+  const shapeClass = STATUS_SHAPE_CLASS[camera.status];
   return L.divIcon({
     className: "auswatch-marker",
-    html: `<span class="auswatch-marker-dot" style="background:${STATUS_COLOR[status]}"></span>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 6],
+    html: `<span class="auswatch-marker-dot ${shapeClass}${selected ? " auswatch-marker-selected" : ""}" style="--marker-color:${color}"></span>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
   });
 }
 
@@ -30,73 +43,74 @@ function clusterIcon(cluster: { getChildCount: () => number }) {
   });
 }
 
-const dateFormatter = new Intl.DateTimeFormat("en-AU", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
+// With animate={false}, leaflet.markercluster's own zoom-end bookkeeping
+// (integer-zoom-indexed) can fall out of sync with the map's actual
+// fractional zoom (zoomSnap=0.1 below) and leave a stale cluster icon on the
+// map after its children have already been shown individually. A full
+// clear+re-add rebuilds the cluster tree from scratch against the current
+// zoom, which is cheap here (a handful of markers) and guarantees no
+// leftover icon can survive a zoom transition.
+function ClusterZoomSync({ clusterRef }: { clusterRef: React.RefObject<L.MarkerClusterGroup | null> }) {
+  const map = useMap();
 
-export default function MapView({ cameras }: { cameras: PublicCamera[] }) {
+  useEffect(() => {
+    function resync() {
+      const group = clusterRef.current;
+      if (!group) return;
+      const layers = group.getLayers();
+      group.clearLayers();
+      group.addLayers(layers);
+    }
+    map.on("zoomend", resync);
+    return () => {
+      map.off("zoomend", resync);
+    };
+  }, [map, clusterRef]);
+
+  return null;
+}
+
+export default function MapView({
+  cameras,
+  selectedId,
+  onSelect,
+  onBasemapReady,
+  flyTarget,
+}: {
+  cameras: PublicCamera[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onBasemapReady?: () => void;
+  flyTarget?: FlyTarget | null;
+}) {
+  const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
+
   return (
     <MapContainer
-      center={AUSTRALIA_CENTER}
-      zoom={DEFAULT_ZOOM}
+      center={[-25.2744, 133.7751]}
+      zoom={MIN_ZOOM}
+      maxBounds={AUSTRALIA_MAX_BOUNDS}
+      maxBoundsViscosity={0.7}
       minZoom={MIN_ZOOM}
+      maxZoom={MAX_ZOOM}
+      zoomSnap={0.1}
+      preferCanvas
+      zoomControl={false}
       className="h-full w-full"
     >
-      <TileLayer url={DARK_TILE_URL} attribution={DARK_TILE_ATTRIBUTION} />
-      <MarkerClusterGroup iconCreateFunction={clusterIcon}>
+      <ZoomControl position="bottomleft" />
+      <FitBounds bounds={AUSTRALIA_BOUNDS} options={FIT_PADDING} />
+      <VectorBasemap onReady={onBasemapReady} />
+      <MapFlyTo target={flyTarget ?? null} />
+      <ClusterZoomSync clusterRef={clusterRef} />
+      <MarkerClusterGroup ref={clusterRef} iconCreateFunction={clusterIcon} animate={false}>
         {cameras.map((camera) => (
           <Marker
             key={camera.id}
             position={[camera.lat, camera.lng]}
-            icon={markerIcon(camera.status)}
-          >
-            <Popup className="auswatch-popup">
-              <h3>{TYPE_LABEL[camera.type]}</h3>
-              <dl>
-                <dt>OPERATOR</dt>
-                <dd>{camera.operator}</dd>
-                <dt>APPEARS TO CAPTURE</dt>
-                <dd>{CAPTURE_LABEL[camera.captures]}</dd>
-                <dt>STATUS</dt>
-                <dd>{STATUS_LABEL[camera.status]}</dd>
-                <dt>FIRST SIGHTED</dt>
-                <dd>{dateFormatter.format(camera.createdAt)}</dd>
-                {camera.notes && (
-                  <>
-                    <dt>NOTES</dt>
-                    <dd>{camera.notes}</dd>
-                  </>
-                )}
-              </dl>
-
-              {camera.history.length > 0 && (
-                <>
-                  <p className="auswatch-timeline-heading">HISTORY</p>
-                  <ol className="auswatch-timeline">
-                    {camera.history.map((event) => (
-                      <li key={event.id}>
-                        <span className="auswatch-timeline-date">
-                          {dateFormatter.format(event.date)}
-                        </span>
-                        <span className="auswatch-timeline-label">
-                          {HISTORY_EVENT_LABEL[event.eventType]}
-                        </span>
-                        {event.note && (
-                          <span className="auswatch-timeline-note">{event.note}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </>
-              )}
-
-              <Link href={`/report/correction/${camera.id}`} className="auswatch-correction-link">
-                Suggest a correction &rarr;
-              </Link>
-            </Popup>
-          </Marker>
+            icon={markerIcon(camera, camera.id === selectedId)}
+            eventHandlers={{ click: () => onSelect(camera.id) }}
+          />
         ))}
       </MarkerClusterGroup>
     </MapContainer>

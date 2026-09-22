@@ -1,14 +1,87 @@
 .leaflet-container {
-  background: #12181d;
+  background: #232b34;
   font-family: var(--font-body), sans-serif;
+}
+
+/*
+ * The same map controls (Leaflet's zoom buttons, the OSM/CARTO attribution,
+ * our own search box) get rendered at wildly different container sizes
+ * across the site - a near-fullscreen explorer map vs. a ~288px-tall
+ * location picker embedded in a form. A container query keyed off the box
+ * that actually holds the map lets the controls scale to that box instead
+ * of carrying one fixed size everywhere.
+ */
+.auswatch-map-frame {
+  position: relative;
+  container-type: size;
+  container-name: auswatch-map;
+}
+
+@container auswatch-map (max-height: 380px) or (max-width: 480px) {
+  .leaflet-bar a,
+  .leaflet-touch .leaflet-bar a {
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+  }
+
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out,
+  .leaflet-touch .leaflet-control-zoom-in,
+  .leaflet-touch .leaflet-control-zoom-out {
+    font-size: 14px;
+  }
+
+  .leaflet-control-attribution {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .auswatch-map-search {
+    width: 11rem;
+  }
+
+  .auswatch-map-search input {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .auswatch-map-search li button {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.65rem;
+  }
+}
+
+.auswatch-map-search {
+  position: relative;
+  width: 16rem;
+  max-width: calc(100vw - 1.5rem);
 }
 
 .auswatch-marker-dot {
   display: block;
+  box-sizing: border-box;
   width: 12px;
   height: 12px;
   border-radius: 9999px;
+  background: var(--marker-color, var(--color-accent));
   box-shadow: 0 0 0 4px rgba(233, 228, 216, 0.08);
+}
+
+.auswatch-marker-dot.auswatch-marker-hollow {
+  background: transparent;
+  border: 2px solid var(--marker-color, var(--color-accent));
+}
+
+.auswatch-marker-dot.auswatch-marker-dashed {
+  background: transparent;
+  border: 2px dashed var(--marker-color, var(--color-accent));
+}
+
+.auswatch-marker-dot.auswatch-marker-selected {
+  box-shadow:
+    0 0 0 3px rgb(var(--color-accent-rgb) / 0.3),
+    0 0 0 1px var(--color-accent);
 }
 
 .auswatch-cluster-wrapper {
@@ -24,109 +97,9 @@
   width: 36px;
   height: 36px;
   border-radius: 9999px;
-  background: rgba(217, 164, 65, 0.15);
-  border: 1px solid rgba(217, 164, 65, 0.5);
-  color: #d9a441;
-  font-family: var(--font-mono), monospace;
+  background: rgb(var(--color-accent-rgb) / 0.15);
+  border: 1px solid rgb(var(--color-accent-rgb) / 0.5);
+  color: var(--color-accent);
+  font-family: var(--font-body), sans-serif;
   font-size: 0.75rem;
-}
-
-.leaflet-popup-content-wrapper {
-  background: #12181d;
-  color: #e9e4d8;
-  border: 1px solid rgba(217, 164, 65, 0.3);
-  border-radius: 4px;
-}
-
-.leaflet-popup-tip {
-  background: #12181d;
-  border: 1px solid rgba(217, 164, 65, 0.3);
-}
-
-.leaflet-popup-close-button {
-  color: rgba(233, 228, 216, 0.5) !important;
-}
-
-.leaflet-popup-close-button:hover {
-  color: #d9a441 !important;
-}
-
-.auswatch-popup dt {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-  color: #d9a441;
-  margin-top: 0.5rem;
-}
-
-.auswatch-popup dt:first-child {
-  margin-top: 0;
-}
-
-.auswatch-popup dd {
-  margin: 0.15rem 0 0;
-  font-size: 0.8rem;
-  color: rgba(233, 228, 216, 0.85);
-}
-
-.auswatch-popup h3 {
-  font-family: var(--font-heading), sans-serif;
-  font-size: 0.95rem;
-  margin: 0 0 0.35rem;
-  color: #e9e4d8;
-}
-
-.auswatch-timeline-heading {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-  color: #d9a441;
-  margin: 0.5rem 0 0;
-}
-
-.auswatch-timeline {
-  list-style: none;
-  margin: 0.3rem 0 0;
-  padding: 0 0 0 0.6rem;
-  border-left: 1px solid rgba(217, 164, 65, 0.3);
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.auswatch-timeline li {
-  display: flex;
-  flex-direction: column;
-}
-
-.auswatch-timeline-date {
-  font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
-  color: rgba(233, 228, 216, 0.5);
-}
-
-.auswatch-timeline-label {
-  font-size: 0.8rem;
-  color: #e9e4d8;
-}
-
-.auswatch-timeline-note {
-  font-size: 0.75rem;
-  color: rgba(233, 228, 216, 0.7);
-}
-
-.auswatch-correction-link {
-  display: block;
-  margin-top: 0.6rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(217, 164, 65, 0.2);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.03em;
-  color: rgba(233, 228, 216, 0.5);
-  text-decoration: none;
-}
-
-.auswatch-correction-link:hover {
-  color: #d9a441;
 }
