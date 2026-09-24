@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import SubmissionForm from "@/components/SubmissionForm";
 
 export const metadata: Metadata = {
@@ -19,6 +20,16 @@ export default function ReportPage() {
           <p className="mt-2 text-sm text-parchment/70">
             No account required. We don&rsquo;t ask for your name or email, and your IP
             address is never stored, only a hashed signal used to prevent spam.
+          </p>
+          <p className="mt-2 text-sm text-parchment/70">
+            Not sure what you&rsquo;re looking at? See the{" "}
+            <Link
+              href="/spotting-guide"
+              className="text-parchment underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber"
+            >
+              spotting guide
+            </Link>{" "}
+            for how to tell types apart.
           </p>
         </header>
         <SubmissionForm />

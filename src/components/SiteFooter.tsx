@@ -14,6 +14,9 @@ export function SiteFooter() {
                 <Link href="/about" className={footerLinkClass}>
                   About Us
                 </Link>
+                <Link href="/spotting-guide" className={footerLinkClass}>
+                  Spotting Guide
+                </Link>
                 <Link href="/privacy" className={footerLinkClass}>
                   Privacy Policy
                 </Link>
