@@ -16,7 +16,7 @@ const NAV_LINKS = [
 export function PublicNav() {
   return (
     <nav className="border-b border-parchment/10 px-6">
-      <div className="flex max-w-5xl items-center justify-between py-3">
+      <div className="flex w-full items-center justify-between py-3">
         <Link href="/" className="flex items-center gap-2.5 font-heading text-lg text-parchment">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/auswatch-logo.svg" alt="" width={22} height={29} />
