@@ -107,12 +107,20 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
   const map = useMap();
   const layerRef = useRef<L.Layer | null>(null);
 
+  // Callers pass a fresh inline callback every render. Listing it as a
+  // dependency of the effect below would rebuild the whole basemap each time,
+  // so the effect reads the latest one through a ref instead.
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  });
+
   useEffect(() => {
     let cancelled = false;
 
     function addRaster() {
       const layer = L.tileLayer(CARTO_RASTER_URL, { attribution: CARTO_ATTRIBUTION, maxZoom: 19 });
-      layer.once("load", () => onReady?.());
+      layer.once("load", () => onReadyRef.current?.());
       layer.addTo(map);
       layerRef.current = layer;
     }
@@ -129,7 +137,7 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
           const layer = L.maplibreGL({ style: style as never });
           layer.addTo(map);
           layerRef.current = layer;
-          layer.getMaplibreMap().once("load", () => onReady?.());
+          layer.getMaplibreMap().once("load", () => onReadyRef.current?.());
         })
         .catch((error) => {
           console.error("Vector basemap failed to load, falling back to raster tiles:", error);
