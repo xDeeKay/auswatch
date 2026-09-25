@@ -36,7 +36,7 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="px-6 pt-5 pb-10">
+    <div className="px-6 py-6">
       <main className="mx-auto flex max-w-5xl flex-col gap-8">
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">

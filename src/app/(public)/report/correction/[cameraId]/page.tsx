@@ -26,7 +26,7 @@ export default async function CorrectionPage({
   }
 
   return (
-    <div className="px-6 pt-5 pb-10">
+    <div className="px-6 py-6">
       <main className="mx-auto flex max-w-5xl flex-col gap-8">
         <header>
           <h1 className="font-heading text-lg text-foreground">Suggest a correction</h1>
