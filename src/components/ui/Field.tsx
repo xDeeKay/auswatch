@@ -2,8 +2,8 @@ import type { SelectHTMLAttributes, TextareaHTMLAttributes, InputHTMLAttributes,
 import { cn } from "@/lib/cn";
 
 const CONTROL_CLASS =
-  "w-full rounded border border-parchment/20 bg-transparent px-2 py-1.5 text-sm text-parchment focus:border-amber focus:outline-none";
-const PLACEHOLDER_CLASS = "placeholder:text-parchment/30";
+  "w-full rounded border border-foreground/20 bg-transparent px-2 py-1.5 text-sm text-foreground focus:border-amber focus:outline-none";
+const PLACEHOLDER_CLASS = "placeholder:text-foreground/30";
 
 export function Label({ children }: { children: ReactNode }) {
   return <label className="font-label text-xs text-amber">{children}</label>;

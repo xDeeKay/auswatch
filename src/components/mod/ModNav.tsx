@@ -6,10 +6,10 @@ import { NavDrawer } from "@/components/NavDrawer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const linkClass =
-  "font-label text-sm text-parchment/70 transition hover:text-amber";
+  "font-label text-sm text-foreground/70 transition hover:text-amber";
 const itemClass = "px-5 first:pl-0";
 const mobileLinkClass =
-  "block py-3 font-label text-sm text-parchment/70 transition hover:text-amber";
+  "block py-3 font-label text-sm text-foreground/70 transition hover:text-amber";
 
 export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: string }) {
   const isAdmin = role === ModeratorRole.admin;
@@ -20,11 +20,11 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
   };
 
   return (
-    <nav className="border-b border-parchment/10 px-6">
+    <nav className="border-b border-foreground/10 px-6">
       <div className="flex w-full items-center justify-between py-3">
         <Link
           href="/moderate"
-          className="flex items-center gap-2.5 font-heading text-lg text-parchment"
+          className="flex items-center gap-2.5 font-heading text-lg text-foreground"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/auswatch-logo.svg" alt="" width={22} height={29} />
@@ -32,7 +32,7 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
         </Link>
 
         <div className="flex items-center gap-1">
-          <div className="hidden items-center divide-x divide-parchment/10 md:flex">
+          <div className="hidden items-center divide-x divide-foreground/10 md:flex">
             <Link href="/moderate" className={cn(linkClass, itemClass)}>
               Queue
             </Link>
@@ -49,7 +49,7 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
                 </Link>
               </>
             )}
-            <span className={cn("font-label text-xs text-parchment/50", itemClass)}>
+            <span className={cn("font-label text-xs text-foreground/50", itemClass)}>
               {userLabel}
             </span>
             <form action={signOutAction} className={itemClass}>
@@ -78,7 +78,7 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
                 </Link>
               </>
             )}
-            <div className="py-3 font-label text-xs text-parchment/50">{userLabel}</div>
+            <div className="py-3 font-label text-xs text-foreground/50">{userLabel}</div>
             <form action={signOutAction}>
               <button type="submit" className={cn(mobileLinkClass, "w-full text-left")}>
                 Sign out

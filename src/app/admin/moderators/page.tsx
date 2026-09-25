@@ -36,13 +36,13 @@ export default async function AdminModeratorsPage() {
           <div
             key={moderator.id}
             className={`rounded border p-5 ${
-              moderator.isActive ? "border-parchment/20" : "border-parchment/10 opacity-60"
+              moderator.isActive ? "border-foreground/20" : "border-foreground/10 opacity-60"
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-heading text-base text-parchment">
+                  <h2 className="font-heading text-base text-foreground">
                     {moderator.user?.name ?? moderator.email}
                   </h2>
                   <Badge tone={moderator.role === ModeratorRole.admin ? "amber" : "neutral"}>
@@ -52,13 +52,13 @@ export default async function AdminModeratorsPage() {
                     {moderator.isActive ? "ACTIVE" : "DEACTIVATED"}
                   </Badge>
                 </div>
-                <p className="mt-1 font-label text-xs text-parchment/50">{moderator.email}</p>
-                <p className="mt-2 text-sm text-parchment/85">
+                <p className="mt-1 font-label text-xs text-foreground/50">{moderator.email}</p>
+                <p className="mt-2 text-sm text-foreground/85">
                   {moderator.role === ModeratorRole.admin
                     ? "Unrestricted access to every state and camera type."
                     : summarizeGrants(moderator.grants)}
                 </p>
-                <p className="mt-2 font-label text-xs text-parchment/50">
+                <p className="mt-2 font-label text-xs text-foreground/50">
                   Added {dateFormatter.format(moderator.createdAt)}
                 </p>
               </div>
@@ -87,7 +87,7 @@ export default async function AdminModeratorsPage() {
           </div>
         ))}
 
-        {moderators.length === 0 && <p className="text-sm text-parchment/50">No moderators yet.</p>}
+        {moderators.length === 0 && <p className="text-sm text-foreground/50">No moderators yet.</p>}
       </div>
     </>
   );

@@ -163,31 +163,31 @@ export default async function ModerateCamerasPage({
           <Link
             key={camera.id}
             href={`/moderate/cameras/${camera.id}`}
-            className="flex items-center justify-between rounded border border-parchment/20 p-4 transition hover:border-amber/40"
+            className="flex items-center justify-between rounded border border-foreground/20 p-4 transition hover:border-amber/40"
           >
             <div>
-              <p className="font-heading text-sm text-parchment">{TYPE_LABEL[camera.type]}</p>
-              <p className="font-label text-xs text-parchment/50">
+              <p className="font-heading text-sm text-foreground">{TYPE_LABEL[camera.type]}</p>
+              <p className="font-label text-xs text-foreground/50">
                 {OPERATOR_CATEGORY_LABEL[camera.operatorCategory]}
                 {camera.operator && ` - ${camera.operator}`}
               </p>
             </div>
             <div className="text-right">
               <p className="font-label text-xs text-amber">{MODERATION_STATE_LABEL[camera.moderationState]}</p>
-              <p className="font-label text-xs text-parchment/50">{dateFormatter.format(camera.createdAt)}</p>
+              <p className="font-label text-xs text-foreground/50">{dateFormatter.format(camera.createdAt)}</p>
             </div>
           </Link>
         ))}
 
         {cameras.length === 0 && (
-          <p className="text-sm text-parchment/50">
+          <p className="text-sm text-foreground/50">
             {stateFilter || typeFilter || statusFilter ? "No cameras match that filter." : "No live cameras yet."}
           </p>
         )}
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between font-label text-xs text-parchment/50">
+        <div className="flex items-center justify-between font-label text-xs text-foreground/50">
           {page > 1 ? (
             <Link
               href={`?${buildQueryString({ ...params, page: String(page - 1) })}`}

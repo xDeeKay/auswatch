@@ -37,7 +37,7 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
   }
 
   return (
-    <div className="overflow-x-auto rounded border border-parchment/10">
+    <div className="overflow-x-auto rounded border border-foreground/10">
       <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="text-left font-label text-xs text-amber">
@@ -52,15 +52,15 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
         </thead>
         <tbody>
           {Object.values(AuState).map((state) => (
-            <tr key={state} className="border-t border-parchment/10">
-              <td className="p-2 text-parchment/85">{STATE_LABEL[state]}</td>
+            <tr key={state} className="border-t border-foreground/10">
+              <td className="p-2 text-foreground/85">{STATE_LABEL[state]}</td>
               {Object.values(CameraType).map((cameraType) => {
                 const key = cellKey(state, cameraType);
                 const cellDefaults = defaults[key];
                 return (
                   <td key={key} className="p-2 text-center">
                     <div className="flex flex-col items-center gap-1">
-                      <label className="flex items-center gap-1 font-label text-[10px] text-parchment/60">
+                      <label className="flex items-center gap-1 font-label text-[10px] text-foreground/60">
                         <input
                           ref={(el) => {
                             viewRefs.current[key] = el;
@@ -77,7 +77,7 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
                         />
                         View
                       </label>
-                      <label className="flex items-center gap-1 font-label text-[10px] text-parchment/60">
+                      <label className="flex items-center gap-1 font-label text-[10px] text-foreground/60">
                         <input
                           ref={(el) => {
                             actRefs.current[key] = el;
@@ -103,14 +103,14 @@ export function GrantMatrix({ defaults = {} }: { defaults?: GrantMatrixDefaults 
                   <button
                     type="button"
                     onClick={() => setRow(state, "act", true)}
-                    className="font-label text-[10px] text-parchment/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
+                    className="font-label text-[10px] text-foreground/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
                   >
                     All act
                   </button>
                   <button
                     type="button"
                     onClick={() => setRow(state, "view", false)}
-                    className="font-label text-[10px] text-parchment/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
+                    className="font-label text-[10px] text-foreground/50 underline decoration-amber/50 underline-offset-2 hover:text-amber"
                   >
                     Clear row
                   </button>

@@ -83,10 +83,10 @@ function CollapsibleSection({
   children: ReactNode;
 }) {
   return (
-    <details open={defaultOpen} className="group rounded border border-parchment/10">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-heading text-base text-parchment [&::-webkit-details-marker]:hidden">
+    <details open={defaultOpen} className="group rounded border border-foreground/10">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-heading text-base text-foreground [&::-webkit-details-marker]:hidden">
         {title}
-        <span className="text-parchment/40 transition group-open:rotate-180">&#9662;</span>
+        <span className="text-foreground/40 transition group-open:rotate-180">&#9662;</span>
       </summary>
       <div className="flex flex-col gap-3 px-4 pb-4">{children}</div>
     </details>
@@ -193,115 +193,115 @@ export default async function CameraDetailPage({
           <table className="w-full table-fixed text-sm">
             <tbody>
               {isPending && (
-                <tr className="border-t border-parchment/10 first:border-t-0">
-                  <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                <tr className="border-t border-foreground/10 first:border-t-0">
+                  <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                     SUBMITTED
                   </th>
-                  <td className="py-1.5 text-parchment/85">{dateTimeFormatter.format(camera.createdAt)}</td>
+                  <td className="py-1.5 text-foreground/85">{dateTimeFormatter.format(camera.createdAt)}</td>
                 </tr>
               )}
               {camera.correctionReports.length > 0 && (
-                <tr className="border-t border-parchment/10 first:border-t-0">
-                  <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+                <tr className="border-t border-foreground/10 first:border-t-0">
+                  <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                     SUBMITTED
                   </th>
-                  <td className="py-1.5 text-parchment/85">
+                  <td className="py-1.5 text-foreground/85">
                     {camera.correctionReports.map((c) => dateTimeFormatter.format(c.createdAt)).join(", ")}
                   </td>
                 </tr>
               )}
-              <tr className="border-t border-parchment/10 first:border-t-0">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10 first:border-t-0">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   ID
                 </th>
-                <td className="break-words py-1.5 font-label text-parchment/85">{camera.id}</td>
+                <td className="break-words py-1.5 font-label text-foreground/85">{camera.id}</td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   STATUS
                 </th>
-                <td className="py-1.5 text-parchment/85">
+                <td className="py-1.5 text-foreground/85">
                   {STATUS_LABEL[camera.status]}
                   {proposedSuffix("status")}
                 </td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   MODERATION STATE
                 </th>
-                <td className="py-1.5 text-parchment/85">{MODERATION_STATE_LABEL[camera.moderationState]}</td>
+                <td className="py-1.5 text-foreground/85">{MODERATION_STATE_LABEL[camera.moderationState]}</td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   CAMERA TYPE
                 </th>
-                <td className="py-1.5 text-parchment/85">
+                <td className="py-1.5 text-foreground/85">
                   {TYPE_LABEL[camera.type]}
                   {proposedSuffix("type")}
                 </td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   APPEARS TO CAPTURE
                 </th>
-                <td className="py-1.5 text-parchment/85">
+                <td className="py-1.5 text-foreground/85">
                   {CAPTURE_LABEL[camera.captures]}
                   {proposedSuffix("captures")}
                 </td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   OPERATOR CATEGORY
                 </th>
-                <td className="py-1.5 text-parchment/85">
+                <td className="py-1.5 text-foreground/85">
                   {OPERATOR_CATEGORY_LABEL[camera.operatorCategory]}
                   {proposedSuffix("operatorCategory")}
                 </td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   OPERATOR
                 </th>
-                <td className="py-1.5 text-parchment/85">
+                <td className="py-1.5 text-foreground/85">
                   {camera.operator || "Unknown"}
                   {proposedSuffix("operator")}
                 </td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left align-top font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left align-top font-label text-xs font-normal text-foreground/50">
                   NOTES
                 </th>
-                <td className="break-words py-1.5 text-parchment/85">
+                <td className="break-words py-1.5 text-foreground/85">
                   {camera.notes || "(none)"}
                   {proposedSuffix("notes")}
                 </td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   STATE/TERRITORY
                 </th>
-                <td className="py-1.5 text-parchment/85">
+                <td className="py-1.5 text-foreground/85">
                   {camera.state ? STATE_LABEL[camera.state] : "Unresolved"}
                   {camera.stateOverride && (
-                    <span className="ml-1 font-label text-xs text-parchment/50">(manually set)</span>
+                    <span className="ml-1 font-label text-xs text-foreground/50">(manually set)</span>
                   )}
                 </td>
               </tr>
-              <tr className="border-t border-parchment/10">
-                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-parchment/50">
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   LOCATION
                 </th>
-                <td className="py-1.5 font-label text-parchment/85">
+                <td className="py-1.5 font-label text-foreground/85">
                   {camera.lat.toFixed(5)}, {camera.lng.toFixed(5)}
                   {proposedSuffix("location")}
                 </td>
               </tr>
               {camera.correctionReports.some((c) => c.reporterNote) && (
-                <tr className="border-t border-parchment/10">
-                  <th scope="row" className="w-44 py-1.5 pr-4 text-left align-top font-label text-xs font-normal text-parchment/50">
+                <tr className="border-t border-foreground/10">
+                  <th scope="row" className="w-44 py-1.5 pr-4 text-left align-top font-label text-xs font-normal text-foreground/50">
                     CORRECTION NOTE
                   </th>
-                  <td className="break-words py-1.5 text-parchment/85">
+                  <td className="break-words py-1.5 text-foreground/85">
                     {camera.correctionReports
                       .filter((c) => c.reporterNote)
                       .map((c, i) => (
@@ -315,7 +315,7 @@ export default async function CameraDetailPage({
             </tbody>
           </table>
 
-          <div className="h-60 overflow-hidden rounded border border-parchment/20">
+          <div className="h-60 overflow-hidden rounded border border-foreground/20">
             <TicketLocationMap lat={camera.lat} lng={camera.lng} sensitiveSites={sensitiveSiteMarkers} />
           </div>
 
@@ -325,7 +325,7 @@ export default async function CameraDetailPage({
                 match.source === SensitiveSiteMatchSource.check_error ? (
                   <div key={match.id} className="rounded border border-error/50 bg-error/10 px-3 py-2 text-sm">
                     <p className="font-label text-xs text-error">AUTOMATED CHECK FAILED</p>
-                    <p className="mt-1 text-parchment/80">Manual review required. {match.detail}</p>
+                    <p className="mt-1 text-foreground/80">Manual review required. {match.detail}</p>
                   </div>
                 ) : (
                   <div key={match.id} className="rounded border border-amber/40 bg-amber/5 px-3 py-2 text-sm">
@@ -334,7 +334,7 @@ export default async function CameraDetailPage({
                       {match.category ? ` - ${ZONE_CATEGORY_LABEL[match.category]}` : ""}
                     </p>
                     {match.distanceMeters !== null && (
-                      <p className="mt-1 font-label text-parchment/80">{Math.round(match.distanceMeters)}m away</p>
+                      <p className="mt-1 font-label text-foreground/80">{Math.round(match.distanceMeters)}m away</p>
                     )}
                   </div>
                 )
@@ -357,17 +357,17 @@ export default async function CameraDetailPage({
                       className="flex flex-col gap-2"
                     >
                       {camera.photos.filter((p) => p.moderationStatus === PhotoModerationStatus.pending).length > 0 && (
-                        <div className="flex flex-col gap-1.5 rounded border border-parchment/20 p-2.5">
+                        <div className="flex flex-col gap-1.5 rounded border border-foreground/20 p-2.5">
                           <p className="font-label text-xs text-amber">APPROVE FOR PUBLIC DISPLAY</p>
                           {camera.photos
                             .filter((p) => p.moderationStatus === PhotoModerationStatus.pending)
                             .map((photo, i) => (
-                              <label key={photo.id} className="flex items-center gap-2 text-sm text-parchment/85">
+                              <label key={photo.id} className="flex items-center gap-2 text-sm text-foreground/85">
                                 <input type="checkbox" name="approvedPhotoIds" value={photo.id} className="accent-amber" />
                                 Photo {i + 1}
                               </label>
                             ))}
-                          <p className="text-xs text-parchment/50">Unchecked photos stay moderator-only.</p>
+                          <p className="text-xs text-foreground/50">Unchecked photos stay moderator-only.</p>
                         </div>
                       )}
                       <Select name="reasonCode" defaultValue="" required>
@@ -410,7 +410,7 @@ export default async function CameraDetailPage({
                     </form>
                   </div>
                 ) : (
-                  <p className="font-label text-xs text-parchment/50">
+                  <p className="font-label text-xs text-foreground/50">
                     View only. You don&rsquo;t have permission to act on this ticket.
                   </p>
                 )}
@@ -423,7 +423,7 @@ export default async function CameraDetailPage({
                   camera.correctionReports.map((correction) => (
                     <div key={correction.id} className="flex flex-col gap-2">
                       {camera.correctionReports.length > 1 && (
-                        <p className="font-label text-xs text-parchment/50">
+                        <p className="font-label text-xs text-foreground/50">
                           Submitted {dateFormatter.format(correction.createdAt)}
                         </p>
                       )}
@@ -475,7 +475,7 @@ export default async function CameraDetailPage({
                     </div>
                   ))
                 ) : (
-                  <p className="font-label text-xs text-parchment/50">
+                  <p className="font-label text-xs text-foreground/50">
                     View only. You don&rsquo;t have permission to act on this ticket.
                   </p>
                 )}
@@ -483,9 +483,9 @@ export default async function CameraDetailPage({
             )}
 
             {canActOnCamera && (
-              <section className="flex flex-col gap-2 rounded border border-parchment/10 p-4">
+              <section className="flex flex-col gap-2 rounded border border-foreground/10 p-4">
                 <h2 className="font-label text-xs text-amber">CORRECT STATE</h2>
-                <p className="text-xs text-parchment/50">
+                <p className="text-xs text-foreground/50">
                   Overrides the auto-derived state, for a border town or bad coordinates the
                   automatic derivation got wrong.
                 </p>
@@ -516,10 +516,10 @@ export default async function CameraDetailPage({
         <div className="flex flex-col gap-8 lg:col-start-1 lg:row-start-2">
           {(camera.photos.length > 0 || camera.correctionReports.some((c) => c.photos.length > 0)) && (
             <section className="flex flex-col gap-3">
-              <h2 className="font-heading text-base text-parchment">Photo evidence</h2>
+              <h2 className="font-heading text-base text-foreground">Photo evidence</h2>
               <div className="flex flex-wrap gap-3">
                 {camera.photos.map((photo, i) => (
-                  <div key={photo.id} className="w-40 rounded border border-parchment/20 p-2">
+                  <div key={photo.id} className="w-40 rounded border border-foreground/20 p-2">
                     <a href={`/api/photos/${photo.id}`} target="_blank" rel="noopener noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element -- moderator-only/gated image served from an authenticated route, not a next/image candidate */}
                       <img
@@ -528,13 +528,13 @@ export default async function CameraDetailPage({
                         className="h-28 w-full rounded object-cover"
                       />
                     </a>
-                    <p className="mt-1.5 font-label text-xs text-parchment/70">{formatGpsSignal(photo.gpsDistanceMeters)}</p>
-                    <p className="font-label text-xs text-parchment/70">{formatCapturedAgeSignal(photo.capturedAgeHours)}</p>
+                    <p className="mt-1.5 font-label text-xs text-foreground/70">{formatGpsSignal(photo.gpsDistanceMeters)}</p>
+                    <p className="font-label text-xs text-foreground/70">{formatCapturedAgeSignal(photo.capturedAgeHours)}</p>
                     <p className="mt-1 font-label text-xs text-amber">{PHOTO_STATUS_LABEL[photo.moderationStatus]}</p>
                   </div>
                 ))}
                 {camera.correctionReports.flatMap((correction) => correction.photos).map((photo, i) => (
-                  <div key={photo.id} className="w-40 rounded border border-parchment/20 p-2">
+                  <div key={photo.id} className="w-40 rounded border border-foreground/20 p-2">
                     <a href={`/api/photos/${photo.id}`} target="_blank" rel="noopener noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element -- moderator-only/gated image served from an authenticated route, not a next/image candidate */}
                       <img
@@ -543,8 +543,8 @@ export default async function CameraDetailPage({
                         className="h-28 w-full rounded object-cover"
                       />
                     </a>
-                    <p className="mt-1.5 font-label text-xs text-parchment/70">{formatGpsSignal(photo.gpsDistanceMeters)}</p>
-                    <p className="font-label text-xs text-parchment/70">{formatCapturedAgeSignal(photo.capturedAgeHours)}</p>
+                    <p className="mt-1.5 font-label text-xs text-foreground/70">{formatGpsSignal(photo.gpsDistanceMeters)}</p>
+                    <p className="font-label text-xs text-foreground/70">{formatCapturedAgeSignal(photo.capturedAgeHours)}</p>
                     <p className="mt-1 font-label text-xs text-amber">Submitted with correction</p>
                   </div>
                 ))}
@@ -555,15 +555,15 @@ export default async function CameraDetailPage({
           <div className="flex flex-col gap-4">
             <CollapsibleSection title="History" defaultOpen>
               {camera.history.length === 0 && (
-                <p className="text-sm text-parchment/50">No history events yet.</p>
+                <p className="text-sm text-foreground/50">No history events yet.</p>
               )}
               <ol className="flex flex-col gap-2">
                 {camera.history.map((event) => (
-                  <li key={event.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
-                    <p className="font-label text-xs text-parchment/50">
+                  <li key={event.id} className="rounded border border-foreground/10 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-foreground/50">
                       {dateFormatter.format(event.date)} - {HISTORY_EVENT_LABEL[event.eventType]}
                     </p>
-                    {event.note && <p className="mt-1 text-parchment/85">{event.note}</p>}
+                    {event.note && <p className="mt-1 text-foreground/85">{event.note}</p>}
                   </li>
                 ))}
               </ol>
@@ -571,12 +571,12 @@ export default async function CameraDetailPage({
 
             <CollapsibleSection title="Moderation actions">
               {camera.moderationActions.length === 0 && (
-                <p className="text-sm text-parchment/50">No moderator decisions yet.</p>
+                <p className="text-sm text-foreground/50">No moderator decisions yet.</p>
               )}
               <ol className="flex flex-col gap-2">
                 {camera.moderationActions.map((action) => (
-                  <li key={action.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
-                    <p className="font-label text-xs text-parchment/50">
+                  <li key={action.id} className="rounded border border-foreground/10 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-foreground/50">
                       {dateFormatter.format(action.createdAt)} - {ACTION_TYPE_LABEL[action.action]} by{" "}
                       {action.actor.name ?? action.actor.email ?? "Unknown moderator"} ({REASON_CODE_LABEL[action.reasonCode]})
                       {action.auditLogEntry?.revertedAt && (
@@ -585,22 +585,22 @@ export default async function CameraDetailPage({
                         </Badge>
                       )}
                     </p>
-                    {action.note && <p className="mt-1 text-parchment/85">{action.note}</p>}
+                    {action.note && <p className="mt-1 text-foreground/85">{action.note}</p>}
                   </li>
                 ))}
               </ol>
             </CollapsibleSection>
 
             <CollapsibleSection title="Audit log">
-              {auditLog.length === 0 && <p className="text-sm text-parchment/50">No audit entries yet.</p>}
+              {auditLog.length === 0 && <p className="text-sm text-foreground/50">No audit entries yet.</p>}
               <ol className="flex flex-col gap-2">
                 {auditLog.map((entry) => {
                   const afterRows = formatAuditPayload(entry.after);
                   const isHead = headEntryIdByEntity.get(`${entry.entityType}:${entry.entityId}`) === entry.id;
                   return (
-                    <li key={entry.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+                    <li key={entry.id} className="rounded border border-foreground/10 px-3 py-2 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="font-label text-xs text-parchment/50">
+                        <p className="font-label text-xs text-foreground/50">
                           {dateTimeFormatter.format(entry.createdAt)} - {AUDIT_ACTION_LABEL[entry.action]} by{" "}
                           {entry.actor.name ?? entry.actor.email ?? "Unknown"}
                           {entry.revertedAt && (
@@ -622,9 +622,9 @@ export default async function CameraDetailPage({
                           </form>
                         )}
                       </div>
-                      {entry.summary && <p className="mt-1 text-parchment/85">{entry.summary}</p>}
+                      {entry.summary && <p className="mt-1 text-foreground/85">{entry.summary}</p>}
                       {afterRows.length > 0 && (
-                        <p className="mt-1 font-label text-xs text-parchment/50">
+                        <p className="mt-1 font-label text-xs text-foreground/50">
                           {afterRows.map((row) => `${row.label}: ${row.text}`).join(" - ")}
                         </p>
                       )}
@@ -636,15 +636,15 @@ export default async function CameraDetailPage({
 
             <CollapsibleSection title="Moderator notes" defaultOpen>
               {camera.internalNotes.length === 0 && (
-                <p className="text-sm text-parchment/50">No notes yet.</p>
+                <p className="text-sm text-foreground/50">No notes yet.</p>
               )}
               <ol className="flex flex-col gap-2">
                 {camera.internalNotes.map((note) => (
-                  <li key={note.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
-                    <p className="font-label text-xs text-parchment/50">
+                  <li key={note.id} className="rounded border border-foreground/10 px-3 py-2 text-sm">
+                    <p className="font-label text-xs text-foreground/50">
                       {dateFormatter.format(note.createdAt)} - {note.author.name ?? note.author.email ?? "Unknown moderator"}
                     </p>
-                    <p className="mt-1 whitespace-pre-wrap text-parchment/85">{note.body}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-foreground/85">{note.body}</p>
                   </li>
                 ))}
               </ol>

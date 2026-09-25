@@ -58,7 +58,7 @@ export function PhotoPicker({
   return (
     <div className="flex flex-col gap-1.5">
       <label className={fieldLabel}>PHOTO EVIDENCE (OPTIONAL)</label>
-      <p className="text-xs text-parchment/50">
+      <p className="text-xs text-foreground/50">
         Up to {MAX_PHOTOS_PER_SUBMISSION} photos of the camera itself, from a public place. Helps a
         moderator verify the report. Never shown publicly unless a moderator approves it.
       </p>
@@ -66,13 +66,13 @@ export function PhotoPicker({
       {previews.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {previews.map((url, i) => (
-            <div key={url} className="relative h-20 w-20 overflow-hidden rounded border border-parchment/20">
+            <div key={url} className="relative h-20 w-20 overflow-hidden rounded border border-foreground/20">
               {/* eslint-disable-next-line @next/next/no-img-element -- transient client-side blob preview, not a next/image candidate */}
               <img src={url} alt="" className="h-full w-full object-cover" />
               <button
                 type="button"
                 onClick={() => removePhoto(i)}
-                className="absolute right-0 top-0 bg-ink/80 px-1.5 py-0.5 font-label text-xs text-parchment hover:text-error"
+                className="absolute right-0 top-0 bg-surface/80 px-1.5 py-0.5 font-label text-xs text-foreground hover:text-error"
                 aria-label="Remove photo"
               >
                 &times;
@@ -89,7 +89,7 @@ export function PhotoPicker({
           accept={ACCEPT}
           multiple
           onChange={(e) => handleFiles(e.target.files)}
-          className="text-sm text-parchment/70 file:mr-3 file:rounded file:border file:border-parchment/20 file:bg-transparent file:px-3 file:py-1.5 file:font-label file:text-xs file:text-amber"
+          className="text-sm text-foreground/70 file:mr-3 file:rounded file:border file:border-foreground/20 file:bg-transparent file:px-3 file:py-1.5 file:font-label file:text-xs file:text-amber"
         />
       )}
 

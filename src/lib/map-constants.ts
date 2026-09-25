@@ -34,7 +34,7 @@ export const CARTO_RASTER_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/
 export const CARTO_ATTRIBUTION = "&copy; OpenStreetMap &copy; CARTO";
 
 // Repaints CARTO's dark-matter vector style onto AusWatch's own palette
-// (ink/parchment/amber) instead of its stock neutral-grey scheme, the same
+// (surface/foreground/amber) instead of its stock neutral-grey scheme, the same
 // per-layer override technique used in the SkyBro project this was adapted
 // from - one flat color per layer rather than a zoom-stop translation, since
 // matching the source raster's own stop breakpoints wouldn't carry over.

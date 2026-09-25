@@ -5,7 +5,7 @@ export type BadgeTone = "amber" | "neutral" | "error";
 
 const TONE_CLASS: Record<BadgeTone, string> = {
   amber: "border-amber/40 text-amber",
-  neutral: "border-parchment/30 text-parchment/70",
+  neutral: "border-foreground/30 text-foreground/70",
   error: "border-error/40 text-error",
 };
 

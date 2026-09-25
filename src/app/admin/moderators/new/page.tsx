@@ -37,7 +37,7 @@ export default async function NewModeratorPage() {
         <div className="flex flex-col gap-1">
           <Label>EMAIL</Label>
           <TextInput type="email" name="email" required placeholder="mod@example.com" />
-          <p className="text-xs text-parchment/50">
+          <p className="text-xs text-foreground/50">
             A new moderator starts with zero access. Grant access below, or leave it for later.
           </p>
         </div>
@@ -48,7 +48,7 @@ export default async function NewModeratorPage() {
             <option value={ModeratorRole.moderator}>Moderator (scoped)</option>
             <option value={ModeratorRole.admin}>Admin (unrestricted)</option>
           </Select>
-          <p className="text-xs text-parchment/50">
+          <p className="text-xs text-foreground/50">
             The grant matrix below only applies to the Moderator role. Admins have full access and ignore it.
           </p>
         </div>

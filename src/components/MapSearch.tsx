@@ -116,20 +116,20 @@ export function MapSearch({ onSelect }: { onSelect: (target: FlyTarget) => void 
         }}
         placeholder="Search a suburb, street or address"
         aria-label="Search the map"
-        className="bg-ink/90 shadow"
+        className="bg-surface/90 shadow"
       />
 
       {open && (loading || results.length > 0) && (
-        <ul className="absolute left-0 right-0 top-full z-[950] mt-1 max-h-64 overflow-y-auto rounded border border-parchment/20 bg-ink/95 shadow">
+        <ul className="absolute left-0 right-0 top-full z-[950] mt-1 max-h-64 overflow-y-auto rounded border border-foreground/20 bg-surface/95 shadow">
           {loading && results.length === 0 && (
-            <li className="px-3 py-2 text-xs text-parchment/50">Searching&hellip;</li>
+            <li className="px-3 py-2 text-xs text-foreground/50">Searching&hellip;</li>
           )}
           {results.map((result, i) => (
             <li key={`${result.target.lat}-${result.target.lng}-${i}`}>
               <button
                 type="button"
                 onClick={() => selectResult(result)}
-                className="block w-full px-3 py-2 text-left text-xs text-parchment/80 hover:bg-parchment/10 hover:text-parchment"
+                className="block w-full px-3 py-2 text-left text-xs text-foreground/80 hover:bg-foreground/10 hover:text-foreground"
               >
                 {result.label}
               </button>

@@ -9,7 +9,7 @@ import { PhotoPicker } from "@/components/PhotoPicker";
 
 const fieldLabel = "font-label text-xs text-amber";
 const inputClass =
-  "w-full rounded border border-parchment/20 bg-transparent px-3 py-2 text-sm text-parchment placeholder:text-parchment/30 focus:border-amber focus:outline-none";
+  "w-full rounded border border-foreground/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:border-amber focus:outline-none";
 
 type SubmitState = "idle" | "submitting" | "done" | "error";
 
@@ -75,8 +75,8 @@ export default function SubmissionForm() {
   if (state === "done") {
     return (
       <div className="mx-auto max-w-xl rounded border border-amber/30 bg-amber/5 p-6">
-        <p className="font-heading text-lg text-parchment">Submission received</p>
-        <p className="mt-2 text-sm text-parchment/70">
+        <p className="font-heading text-lg text-foreground">Submission received</p>
+        <p className="mt-2 text-sm text-foreground/70">
           Thank you. Your report is now in the review queue. It will not appear on the
           public map unless a moderator verifies it.
         </p>
@@ -193,7 +193,7 @@ export default function SubmissionForm() {
 
       <div className="flex flex-col gap-1.5">
         <label className={fieldLabel}>LOCATION</label>
-        <div className="h-72 overflow-hidden rounded border border-parchment/20">
+        <div className="h-72 overflow-hidden rounded border border-foreground/20">
           <LocationPicker value={location} onChange={setLocation} />
         </div>
       </div>

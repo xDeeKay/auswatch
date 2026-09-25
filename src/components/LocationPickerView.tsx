@@ -89,7 +89,7 @@ export default function LocationPickerView({
           <MapSearch onSelect={setFlyTarget} />
         </div>
       </div>
-      <p className="font-label border-t border-parchment/10 px-3 py-2 text-xs text-parchment/50">
+      <p className="font-label border-t border-foreground/10 px-3 py-2 text-xs text-foreground/50">
         {value
           ? `${value.lat.toFixed(5)}, ${value.lng.toFixed(5)} (drag the pin to adjust)`
           : "Click the map to mark the camera's location"}

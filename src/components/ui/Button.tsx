@@ -8,7 +8,7 @@ export type ButtonSize = "xs" | "sm" | "md";
 const TONE_CLASS: Record<ButtonTone, string> = {
   primary: "border-amber bg-amber/10 text-amber hover:bg-amber/20",
   destructive: "border-error bg-error/10 text-error hover:bg-error/20",
-  secondary: "border-parchment/20 text-parchment/70 hover:border-amber hover:text-amber",
+  secondary: "border-foreground/20 text-foreground/70 hover:border-amber hover:text-amber",
 };
 
 const SIZE_CLASS: Record<ButtonSize, string> = {

@@ -14,8 +14,8 @@ export default async function ModeratorSignInPage({
 
   return (
     <main className="mx-auto flex max-w-md flex-col items-center gap-4 px-6 py-20 text-center">
-      <p className="font-label text-xs text-parchment/50">AusWatch</p>
-      <h1 className="font-heading text-lg text-parchment">Moderator sign in</h1>
+      <p className="font-label text-xs text-foreground/50">AusWatch</p>
+      <h1 className="font-heading text-lg text-foreground">Moderator sign in</h1>
 
       {error === "AccessDenied" && (
         <p className="text-sm text-error">

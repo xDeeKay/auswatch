@@ -72,7 +72,7 @@ export function ThemeToggle() {
       onClick={cycle}
       aria-label={LABELS[preference]}
       title={LABELS[preference]}
-      className="flex h-9 w-9 items-center justify-center text-parchment/70 transition hover:text-amber"
+      className="flex h-9 w-9 items-center justify-center text-foreground/70 transition hover:text-amber"
     >
       {mounted ? <Icon preference={preference} /> : <span className="h-5 w-5" />}
     </button>

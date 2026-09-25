@@ -1,15 +1,15 @@
 import Link from "next/link";
 
-const footerLinkClass = "font-label text-xs text-parchment/60 transition hover:text-amber";
+const footerLinkClass = "font-label text-xs text-foreground/60 transition hover:text-amber";
 
 export function SiteFooter() {
   return (
     <>
-      <footer className="border-t border-parchment/10 px-6 py-6">
+      <footer className="border-t border-foreground/10 px-6 py-6">
         <div className="mx-auto max-w-5xl">
           <div className="grid grid-cols-1 gap-8 text-center min-[480px]:grid-cols-3">
             <div className="flex flex-col items-center gap-3">
-              <p className="font-label text-xs text-parchment/50">INFO</p>
+              <p className="font-label text-xs text-foreground/50">INFO</p>
               <nav className="flex flex-col items-center gap-2">
                 <Link href="/about" className={footerLinkClass}>
                   About Us
@@ -26,7 +26,7 @@ export function SiteFooter() {
               </nav>
             </div>
             <div className="flex flex-col items-center gap-3">
-              <p className="font-label text-xs text-parchment/50">CONTACT</p>
+              <p className="font-label text-xs text-foreground/50">CONTACT</p>
               <nav className="flex flex-col items-center gap-2">
                 <a href="mailto:contact@auswatch.org" className={footerLinkClass}>
                   contact@auswatch.org
@@ -40,7 +40,7 @@ export function SiteFooter() {
               </nav>
             </div>
             <div className="flex flex-col items-center gap-3">
-              <p className="font-label text-xs text-parchment/50">CONTRIBUTE</p>
+              <p className="font-label text-xs text-foreground/50">CONTRIBUTE</p>
               <nav className="flex flex-col items-center gap-2">
                 <Link href="/report" className={footerLinkClass}>
                   Submit Camera
@@ -61,8 +61,8 @@ export function SiteFooter() {
           </div>
         </div>
       </footer>
-      <div className="border-t border-parchment/10 px-6 py-6">
-        <p className="text-center font-label text-xs text-parchment/40">
+      <div className="border-t border-foreground/10 px-6 py-6">
+        <p className="text-center font-label text-xs text-foreground/40">
           &copy; 2026 AusWatch. All rights reserved.
         </p>
       </div>

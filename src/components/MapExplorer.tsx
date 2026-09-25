@@ -54,8 +54,8 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
 function chipClass(active: boolean) {
   return `flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-left font-label text-xs transition ${
     active
-      ? "border-amber/50 bg-amber/10 text-parchment"
-      : "border-parchment/15 text-parchment/40 hover:border-parchment/30 hover:text-parchment/70"
+      ? "border-amber/50 bg-amber/10 text-foreground"
+      : "border-foreground/15 text-foreground/40 hover:border-foreground/30 hover:text-foreground/70"
   }`;
 }
 
@@ -63,8 +63,8 @@ function chipClass(active: boolean) {
 function accentChipProps(active: boolean, color: string): { className: string; style?: CSSProperties } {
   const className = `flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-left font-label text-xs transition ${
     active
-      ? "text-parchment"
-      : "border-parchment/15 text-parchment/40 hover:border-parchment/30 hover:text-parchment/70"
+      ? "text-foreground"
+      : "border-foreground/15 text-foreground/40 hover:border-foreground/30 hover:text-foreground/70"
   }`;
   return active ? { className, style: { borderColor: `${color}80`, backgroundColor: `${color}1A` } } : { className };
 }
@@ -142,7 +142,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
   return (
     <div className="relative flex h-full">
       <aside
-        className={`absolute inset-y-0 left-0 z-[1300] flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-parchment/10 bg-ink p-4 transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`absolute inset-y-0 left-0 z-[1300] flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-foreground/10 bg-surface p-4 transition-transform duration-200 lg:static lg:translate-x-0 ${
           filtersOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -152,13 +152,13 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
             type="button"
             onClick={() => setFiltersOpen(false)}
             aria-label="Close"
-            className="font-label text-lg text-parchment/40 hover:text-parchment lg:hidden"
+            className="font-label text-lg text-foreground/40 hover:text-foreground lg:hidden"
           >
             &times;
           </button>
         </div>
 
-        <div className="-mt-2 flex flex-col gap-2 border-t border-parchment/10 pt-4">
+        <div className="-mt-2 flex flex-col gap-2 border-t border-foreground/10 pt-4">
           <Label>STATUS</Label>
           {STATUS_ORDER.map((status) => {
             const count = cameras.filter((c) => c.status === status).length;
@@ -166,13 +166,13 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
             return (
               <button key={status} type="button" onClick={() => toggleStatus(status)} className={className} style={style}>
                 <span className="capitalize">{STATUS_LABEL[status]}</span>
-                <span className="text-parchment/40">{count}</span>
+                <span className="text-foreground/40">{count}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-parchment/10 pt-4">
+        <div className="flex flex-col gap-2 border-t border-foreground/10 pt-4">
           <Label>CAMERA TYPE</Label>
           {TYPE_ORDER.map((type) => {
             const count = cameras.filter((c) => c.type === type).length;
@@ -180,13 +180,13 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
             return (
               <button key={type} type="button" onClick={() => toggleType(type)} className={className} style={style}>
                 <span className="capitalize">{TYPE_LABEL[type]}</span>
-                <span className="text-parchment/40">{count}</span>
+                <span className="text-foreground/40">{count}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-parchment/10 pt-4">
+        <div className="flex flex-col gap-2 border-t border-foreground/10 pt-4">
           <Label>OPERATOR CATEGORY</Label>
           {OPERATOR_CATEGORY_ORDER.map((category) => {
             const count = cameras.filter((c) => c.operatorCategory === category).length;
@@ -198,13 +198,13 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
                 className={chipClass(activeOperatorCategories.has(category))}
               >
                 <span className="capitalize">{OPERATOR_CATEGORY_LABEL[category]}</span>
-                <span className="text-parchment/40">{count}</span>
+                <span className="text-foreground/40">{count}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-parchment/10 pt-4">
+        <div className="flex flex-col gap-2 border-t border-foreground/10 pt-4">
           <Label>STATE/TERRITORY</Label>
           {STATE_ORDER.map((state) => {
             const count = cameras.filter((c) => c.state === state).length;
@@ -216,14 +216,14 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
                 className={chipClass(activeStates.has(state))}
               >
                 <span className="capitalize">{stateLabel(state)}</span>
-                <span className="text-parchment/40">{count}</span>
+                <span className="text-foreground/40">{count}</span>
               </button>
             );
           })}
         </div>
 
         {yearRange.min < yearRange.max && (
-          <div className="flex flex-col gap-1 border-t border-parchment/10 pt-4">
+          <div className="flex flex-col gap-1 border-t border-foreground/10 pt-4">
             <Label>ADDED SINCE</Label>
             <input
               type="range"
@@ -233,11 +233,11 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
               onChange={(e) => setSinceYear(Number(e.target.value))}
               className="accent-amber"
             />
-            <p className="font-label text-xs text-parchment/50">{sinceYear}</p>
+            <p className="font-label text-xs text-foreground/50">{sinceYear}</p>
           </div>
         )}
 
-        <p className="mt-auto border-t border-parchment/10 pt-3 font-label text-xs text-parchment/50">
+        <p className="mt-auto border-t border-foreground/10 pt-3 font-label text-xs text-foreground/50">
           {filteredCameras.length} of {cameras.length} devices shown
         </p>
       </aside>
@@ -247,7 +247,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
           type="button"
           aria-label="Close filters"
           onClick={() => setFiltersOpen(false)}
-          className="absolute inset-0 z-[1200] border-0 bg-ink/70 p-0 lg:hidden"
+          className="absolute inset-0 z-[1200] border-0 bg-surface/70 p-0 lg:hidden"
         />
       )}
 
@@ -261,7 +261,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
         />
 
         {!basemapReady && (
-          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-ink font-label text-sm text-parchment/50">
+          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-surface font-label text-sm text-foreground/50">
             Loading map&hellip;
           </div>
         )}
@@ -273,20 +273,20 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
-          className="absolute right-3 top-3 z-[900] rounded border border-parchment/20 bg-ink/90 px-3 py-1.5 font-label text-xs text-parchment shadow lg:hidden"
+          className="absolute right-3 top-3 z-[900] rounded border border-foreground/20 bg-surface/90 px-3 py-1.5 font-label text-xs text-foreground shadow lg:hidden"
         >
           Filters
         </button>
 
         {selectedCamera && (
-          <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-parchment/10 bg-ink p-5 lg:inset-y-0 lg:inset-x-auto lg:right-0 lg:w-80 lg:bg-ink/95">
+          <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-foreground/10 bg-surface p-5 lg:inset-y-0 lg:inset-x-auto lg:right-0 lg:w-80 lg:bg-surface/95">
             <div className="flex items-start justify-between gap-2">
-              <h2 className="font-heading text-base text-parchment">{TYPE_LABEL[selectedCamera.type]}</h2>
+              <h2 className="font-heading text-base text-foreground">{TYPE_LABEL[selectedCamera.type]}</h2>
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
                 aria-label="Close"
-                className="font-label text-lg text-parchment/40 hover:text-parchment"
+                className="font-label text-lg text-foreground/40 hover:text-foreground"
               >
                 &times;
               </button>
@@ -294,38 +294,38 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
 
             <dl className="flex flex-col gap-3 text-sm">
               <div>
-                <dt className="font-label text-xs text-parchment/50">STATUS</dt>
-                <dd className="text-parchment/85">{STATUS_LABEL[selectedCamera.status]}</dd>
+                <dt className="font-label text-xs text-foreground/50">STATUS</dt>
+                <dd className="text-foreground/85">{STATUS_LABEL[selectedCamera.status]}</dd>
               </div>
               <div>
-                <dt className="font-label text-xs text-parchment/50">APPEARS TO CAPTURE</dt>
-                <dd className="text-parchment/85">{CAPTURE_LABEL[selectedCamera.captures]}</dd>
+                <dt className="font-label text-xs text-foreground/50">APPEARS TO CAPTURE</dt>
+                <dd className="text-foreground/85">{CAPTURE_LABEL[selectedCamera.captures]}</dd>
               </div>
               <div>
-                <dt className="font-label text-xs text-parchment/50">OPERATOR CATEGORY</dt>
-                <dd className="text-parchment/85">{OPERATOR_CATEGORY_LABEL[selectedCamera.operatorCategory]}</dd>
+                <dt className="font-label text-xs text-foreground/50">OPERATOR CATEGORY</dt>
+                <dd className="text-foreground/85">{OPERATOR_CATEGORY_LABEL[selectedCamera.operatorCategory]}</dd>
               </div>
               {selectedCamera.operator && (
                 <div>
-                  <dt className="font-label text-xs text-parchment/50">OWNER / OPERATOR</dt>
-                  <dd className="text-parchment/85">{selectedCamera.operator}</dd>
+                  <dt className="font-label text-xs text-foreground/50">OWNER / OPERATOR</dt>
+                  <dd className="text-foreground/85">{selectedCamera.operator}</dd>
                 </div>
               )}
               <div>
-                <dt className="font-label text-xs text-parchment/50">STATE/TERRITORY</dt>
-                <dd className="text-parchment/85">
+                <dt className="font-label text-xs text-foreground/50">STATE/TERRITORY</dt>
+                <dd className="text-foreground/85">
                   {selectedCamera.state ? STATE_LABEL[selectedCamera.state] : "Unknown"}
                 </dd>
               </div>
               <div>
-                <dt className="font-label text-xs text-parchment/50">COORDINATES</dt>
-                <dd className="font-label text-parchment/85">
+                <dt className="font-label text-xs text-foreground/50">COORDINATES</dt>
+                <dd className="font-label text-foreground/85">
                   {selectedCamera.lat.toFixed(4)}, {selectedCamera.lng.toFixed(4)}
                 </dd>
               </div>
               <div>
-                <dt className="font-label text-xs text-parchment/50">FIRST SIGHTED</dt>
-                <dd className="font-label text-parchment/85">{dateFormatter.format(selectedCamera.createdAt)}</dd>
+                <dt className="font-label text-xs text-foreground/50">FIRST SIGHTED</dt>
+                <dd className="font-label text-foreground/85">{dateFormatter.format(selectedCamera.createdAt)}</dd>
               </div>
             </dl>
 

@@ -194,10 +194,10 @@ export default async function AuditLogPage({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone="neutral">{AUDIT_ENTITY_LABEL[entry.entityType]}</Badge>
-                    <h2 className="font-heading text-sm text-parchment">{AUDIT_ACTION_LABEL[entry.action]}</h2>
+                    <h2 className="font-heading text-sm text-foreground">{AUDIT_ACTION_LABEL[entry.action]}</h2>
                     {entry.revertedAt && <Badge tone="error">REVERTED</Badge>}
                   </div>
-                  <p className="mt-1.5 font-label text-xs text-parchment/50">
+                  <p className="mt-1.5 font-label text-xs text-foreground/50">
                     {dateTimeFormatter.format(entry.createdAt)} by{" "}
                     {entry.actor.name ?? entry.actor.email ?? "Unknown"}
                     {href && (
@@ -213,9 +213,9 @@ export default async function AuditLogPage({
                       </>
                     )}
                   </p>
-                  {entry.summary && <p className="mt-1 font-label text-xs text-parchment/50">{entry.summary}</p>}
+                  {entry.summary && <p className="mt-1 font-label text-xs text-foreground/50">{entry.summary}</p>}
                   {entry.revertedAt && (
-                    <p className="mt-1 font-label text-xs text-parchment/50">
+                    <p className="mt-1 font-label text-xs text-foreground/50">
                       Reverted {dateTimeFormatter.format(entry.revertedAt)} by{" "}
                       {entry.revertedBy?.name ?? entry.revertedBy?.email ?? "Unknown"}
                     </p>
@@ -241,11 +241,11 @@ export default async function AuditLogPage({
           );
         })}
 
-        {result.items.length === 0 && <p className="text-sm text-parchment/50">No history yet.</p>}
+        {result.items.length === 0 && <p className="text-sm text-foreground/50">No history yet.</p>}
       </div>
 
       {result.totalPages > 1 && (
-        <div className="flex items-center justify-between font-label text-xs text-parchment/50">
+        <div className="flex items-center justify-between font-label text-xs text-foreground/50">
           {result.page > 1 ? (
             <Link
               href={`?${buildQueryString({ ...params, page: String(result.page - 1) })}`}

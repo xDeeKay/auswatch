@@ -74,7 +74,7 @@ export default async function EditModeratorPage({ params }: { params: Promise<{ 
             <option value={ModeratorRole.moderator}>Moderator (scoped)</option>
             <option value={ModeratorRole.admin}>Admin (unrestricted)</option>
           </Select>
-          <p className="text-xs text-parchment/50">
+          <p className="text-xs text-foreground/50">
             The grant matrix below only applies to the Moderator role. Admins have full access and ignore it.
           </p>
         </div>
@@ -90,13 +90,13 @@ export default async function EditModeratorPage({ params }: { params: Promise<{ 
       </form>
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-base text-parchment">History</h2>
-        {history.length === 0 && <p className="text-sm text-parchment/50">No history yet.</p>}
+        <h2 className="font-heading text-base text-foreground">History</h2>
+        {history.length === 0 && <p className="text-sm text-foreground/50">No history yet.</p>}
         <ol className="flex flex-col gap-2">
           {history.map((entry) => (
-            <li key={entry.id} className="rounded border border-parchment/10 px-3 py-2 text-sm">
+            <li key={entry.id} className="rounded border border-foreground/10 px-3 py-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-label text-xs text-parchment/50">
+                <p className="font-label text-xs text-foreground/50">
                   {dateTimeFormatter.format(entry.createdAt)} - {AUDIT_ACTION_LABEL[entry.action]} by{" "}
                   {entry.actor.name ?? entry.actor.email ?? "Unknown"}
                   {entry.revertedAt && (
@@ -118,8 +118,8 @@ export default async function EditModeratorPage({ params }: { params: Promise<{ 
                   </form>
                 )}
               </div>
-              {entry.summary && <p className="mt-1 text-parchment/85">{entry.summary}</p>}
-              <p className="mt-1 font-label text-xs text-parchment/50">
+              {entry.summary && <p className="mt-1 text-foreground/85">{entry.summary}</p>}
+              <p className="mt-1 font-label text-xs text-foreground/50">
                 {formatAuditPayload(entry.after)
                   .map((row) => `${row.label}: ${row.text}`)
                   .join(" - ")}

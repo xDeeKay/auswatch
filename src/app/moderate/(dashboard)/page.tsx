@@ -140,7 +140,7 @@ export default async function ModeratePage({
             <Link
               key={`${ticket.kind}-${ticket.id}`}
               href={`/moderate/cameras/${ticket.cameraId}`}
-              className="flex flex-wrap items-center justify-between gap-2 rounded border border-parchment/20 p-4 transition hover:border-amber/40"
+              className="flex flex-wrap items-center justify-between gap-2 rounded border border-foreground/20 p-4 transition hover:border-amber/40"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={ticket.kind === "submission" ? "amber" : "neutral"}>
@@ -149,8 +149,8 @@ export default async function ModeratePage({
                 {hasCheckError && <Badge tone="error">CHECK FAILED</Badge>}
                 {hasMatch && <Badge tone="amber">SENSITIVE SITE</Badge>}
                 <div>
-                  <p className="font-heading text-sm text-parchment">{TYPE_LABEL[ticket.camera.type]}</p>
-                  <p className="font-label text-xs text-parchment/50">
+                  <p className="font-heading text-sm text-foreground">{TYPE_LABEL[ticket.camera.type]}</p>
+                  <p className="font-label text-xs text-foreground/50">
                     {OPERATOR_CATEGORY_LABEL[ticket.camera.operatorCategory]}
                     {ticket.camera.operator && ` - ${ticket.camera.operator}`}
                   </p>
@@ -160,17 +160,17 @@ export default async function ModeratePage({
                 <p className="font-label text-xs text-amber">
                   {ticket.state ? STATE_LABEL[ticket.state] : "Unresolved"}
                 </p>
-                <p className="font-label text-xs text-parchment/50">{dateFormatter.format(ticket.createdAt)}</p>
+                <p className="font-label text-xs text-foreground/50">{dateFormatter.format(ticket.createdAt)}</p>
               </div>
             </Link>
           );
         })}
 
-        {result.items.length === 0 && <p className="text-sm text-parchment/50">Nothing pending review right now.</p>}
+        {result.items.length === 0 && <p className="text-sm text-foreground/50">Nothing pending review right now.</p>}
       </div>
 
       {result.totalPages > 1 && (
-        <div className="flex items-center justify-between font-label text-xs text-parchment/50">
+        <div className="flex items-center justify-between font-label text-xs text-foreground/50">
           {result.page > 1 ? (
             <Link
               href={`?${buildQueryString({ ...params, page: String(result.page - 1) })}`}

@@ -4,8 +4,8 @@ import { cn } from "@/lib/cn";
 export type CardDensity = "cozy" | "compact";
 
 const DENSITY_CLASS: Record<CardDensity, string> = {
-  cozy: "border-parchment/20 p-5",
-  compact: "border-parchment/10 px-3 py-2 text-sm",
+  cozy: "border-foreground/20 p-5",
+  compact: "border-foreground/10 px-3 py-2 text-sm",
 };
 
 export function Card({

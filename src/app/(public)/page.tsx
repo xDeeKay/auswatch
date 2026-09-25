@@ -24,16 +24,16 @@ export default async function LandingPage() {
 
   return (
     <main className="flex flex-col">
-      <section className="border-b border-parchment/10 px-6 py-6">
+      <section className="border-b border-foreground/10 px-6 py-6">
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
           <p className="font-label text-xs text-amber">VOLUNTEER-RUN &middot; MODERATED &middot; OPEN LICENSE</p>
-          <h1 className="max-w-2xl font-heading text-3xl leading-tight text-parchment sm:text-4xl">
+          <h1 className="max-w-2xl font-heading text-3xl leading-tight text-foreground sm:text-4xl">
             A Public Record of Surveillance Infrastructure Across Australia
           </h1>
-          <p className="max-w-xl text-sm font-semibold leading-relaxed text-parchment/85">
+          <p className="max-w-xl text-sm font-semibold leading-relaxed text-foreground/85">
             You can&rsquo;t opt out of a camera you don&rsquo;t know exists.
           </p>
-          <p className="max-w-xl text-sm leading-relaxed text-parchment/70">
+          <p className="max-w-xl text-sm leading-relaxed text-foreground/70">
             AusWatch records the cameras, plate readers, and recognition systems installed in
             public spaces. We document the camera type, who operates it, what it appears to
             capture, and whether it ever gets taken down. Every record is logged by a volunteer
@@ -49,12 +49,12 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="border-b border-parchment/10 px-6 py-6">
+      <section className="border-b border-foreground/10 px-6 py-6">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 text-center min-[480px]:grid-cols-3">
           {stats.map((stat) => (
             <div key={stat.label}>
-              <p className="font-label text-2xl text-parchment">{stat.value}</p>
-              <p className="mt-1 font-label text-xs text-parchment/50">{stat.label}</p>
+              <p className="font-label text-2xl text-foreground">{stat.value}</p>
+              <p className="mt-1 font-label text-xs text-foreground/50">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -62,9 +62,9 @@ export default async function LandingPage() {
 
       <section className="px-6 py-6">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card density="cozy" className="flex flex-col gap-4 border-parchment/10">
-            <p className="font-label text-xs text-parchment/50">WHAT WE TRACK</p>
-            <ul className="flex flex-col gap-2 text-sm text-parchment/70">
+          <Card density="cozy" className="flex flex-col gap-4 border-foreground/10">
+            <p className="font-label text-xs text-foreground/50">WHAT WE TRACK</p>
+            <ul className="flex flex-col gap-2 text-sm text-foreground/70">
               <li className="flex items-center gap-2.5">
                 <span className="h-1 w-1 shrink-0 rounded-full bg-amber/70" />
                 CCTV Cameras
@@ -83,9 +83,9 @@ export default async function LandingPage() {
               </li>
             </ul>
           </Card>
-          <Card density="cozy" className="flex flex-col gap-4 border-parchment/10">
-            <p className="font-label text-xs text-parchment/50">HOW A RECORD IS MADE</p>
-            <ul className="flex flex-col gap-2 text-sm text-parchment/70">
+          <Card density="cozy" className="flex flex-col gap-4 border-foreground/10">
+            <p className="font-label text-xs text-foreground/50">HOW A RECORD IS MADE</p>
+            <ul className="flex flex-col gap-2 text-sm text-foreground/70">
               <li className="flex items-center gap-2.5">
                 <span className="h-1 w-1 shrink-0 rounded-full bg-amber/70" />
                 A contributor reports a device visible from public land
@@ -100,9 +100,9 @@ export default async function LandingPage() {
               </li>
             </ul>
           </Card>
-          <Card density="cozy" className="flex flex-col gap-4 border-parchment/10">
-            <p className="font-label text-xs text-parchment/50">WHAT WE DON&rsquo;T PUBLISH</p>
-            <ul className="flex flex-col gap-2 text-sm text-parchment/70">
+          <Card density="cozy" className="flex flex-col gap-4 border-foreground/10">
+            <p className="font-label text-xs text-foreground/50">WHAT WE DON&rsquo;T PUBLISH</p>
+            <ul className="flex flex-col gap-2 text-sm text-foreground/70">
               <li className="flex items-center gap-2.5">
                 <span className="h-1 w-1 shrink-0 rounded-full bg-amber/70" />
                 Reporter identities

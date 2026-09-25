@@ -9,39 +9,39 @@ export const metadata: Metadata = {
 };
 
 const linkClass =
-  "text-parchment underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber";
+  "text-foreground underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber";
 
 export default function AboutPage() {
   return (
     <>
       <div className="px-6 py-6">
-        <main className="mx-auto flex max-w-5xl flex-col divide-y divide-parchment/10 [&>*+*]:mt-5 [&>*+*]:pt-5">
+        <main className="mx-auto flex max-w-5xl flex-col divide-y divide-foreground/10 [&>*+*]:mt-5 [&>*+*]:pt-5">
           <header>
-            <h1 className="font-heading text-lg text-parchment">Why AusWatch exists</h1>
-            <p className="mt-4 text-sm leading-relaxed text-parchment/85">
+            <h1 className="font-heading text-lg text-foreground">Why AusWatch exists</h1>
+            <p className="mt-4 text-sm leading-relaxed text-foreground/85">
               You can&rsquo;t opt out of a camera you don&rsquo;t know exists.
             </p>
-            <p className="mt-4 text-sm leading-relaxed text-parchment/70">
+            <p className="mt-4 text-sm leading-relaxed text-foreground/70">
               Across Australia, automated surveillance is expanding. None of it is hidden
               exactly: it&rsquo;s mounted on poles, tunnels, and shopfronts in plain sight. But
               there&rsquo;s no single place that tells you a camera&rsquo;s location, who put it
               there, what it captures, and whether it ever gets taken down.
             </p>
-            <p className="mt-4 text-sm leading-relaxed text-parchment/70">
-              <strong className="text-parchment">AusWatch</strong> is that place, built and
+            <p className="mt-4 text-sm leading-relaxed text-foreground/70">
+              <strong className="text-foreground">AusWatch</strong> is that place, built and
               maintained by the public that&rsquo;s being watched.
             </p>
           </header>
 
           <section className="flex flex-col gap-4">
-            <h2 className="font-heading text-base text-parchment">
+            <h2 className="font-heading text-base text-foreground">
               What&rsquo;s actually happening right now
             </h2>
             <div className="flex flex-col gap-2 border-l-2 border-amber/40 pl-4">
-              <p className="text-sm font-semibold text-parchment">
+              <p className="text-sm font-semibold text-foreground">
                 Facial recognition is moving from retail into policing.
               </p>
-              <p className="text-sm leading-relaxed text-parchment/70">
+              <p className="text-sm leading-relaxed text-foreground/70">
                 In June 2026,{" "}
                 <a
                   className={linkClass}
@@ -67,10 +67,10 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="flex flex-col gap-2 border-l-2 border-amber/40 pl-4">
-              <p className="text-sm font-semibold text-parchment">
+              <p className="text-sm font-semibold text-foreground">
                 Retailers have already been found in breach.
               </p>
-              <p className="text-sm leading-relaxed text-parchment/70">
+              <p className="text-sm leading-relaxed text-foreground/70">
                 <a
                   className={linkClass}
                   href="https://www.oaic.gov.au/news/media-centre/privacy-commissioner-statement-on-administrative-review-tribunals-bunnings-decision"
@@ -125,10 +125,10 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="flex flex-col gap-2 border-l-2 border-amber/40 pl-4">
-              <p className="text-sm font-semibold text-parchment">
+              <p className="text-sm font-semibold text-foreground">
                 Average-speed and plate-reading cameras are spreading state by state.
               </p>
-              <p className="text-sm leading-relaxed text-parchment/70">
+              <p className="text-sm leading-relaxed text-foreground/70">
                 <a
                   className={linkClass}
                   href="https://www.nsw.gov.au/ministerial-releases/average-speed-cameras-switch-to-enforcement-mode-for-both-heavy-and-light-vehicles-under-road-safety-trial"
@@ -172,10 +172,10 @@ export default function AboutPage() {
                 enforcement.
               </p>
             </div>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <p className="text-sm leading-relaxed text-foreground/70">
               Individually, each of these is usually announced, debated, sometimes challenged.
             </p>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <p className="text-sm leading-relaxed text-foreground/70">
               What&rsquo;s missing is the aggregate picture, and what happens to a camera after
               the headline fades. Systems get quietly discontinued, relocated, or renewed with no
               public follow-up either way.
@@ -183,15 +183,15 @@ export default function AboutPage() {
           </section>
 
           <section className="flex flex-col gap-4">
-            <h2 className="font-heading text-base text-parchment">What AusWatch does</h2>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <h2 className="font-heading text-base text-foreground">What AusWatch does</h2>
+            <p className="text-sm leading-relaxed text-foreground/70">
               AusWatch documents surveillance cameras as public-interest infrastructure with a
               full lifecycle. Every submission gets tracked the same way:
             </p>
             <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
               <div>
                 <dt className="font-label text-xs text-amber">WHAT IT IS</dt>
-                <dd className="mt-1 text-sm text-parchment/70">
+                <dd className="mt-1 text-sm text-foreground/70">
                   Type, likely capability, and what it appears to record.
                 </dd>
               </div>
@@ -199,7 +199,7 @@ export default function AboutPage() {
                 <dt className="font-label text-xs text-amber">
                   WHO&rsquo;S RESPONSIBLE
                 </dt>
-                <dd className="mt-1 text-sm text-parchment/70">
+                <dd className="mt-1 text-sm text-foreground/70">
                   Council, state police, private operator, or unknown.
                 </dd>
               </div>
@@ -207,29 +207,29 @@ export default function AboutPage() {
                 <dt className="font-label text-xs text-amber">
                   WHEN IT APPEARED
                 </dt>
-                <dd className="mt-1 text-sm text-parchment/70">The first confirmed sighting.</dd>
+                <dd className="mt-1 text-sm text-foreground/70">The first confirmed sighting.</dd>
               </div>
               <div>
                 <dt className="font-label text-xs text-amber">
                   WHETHER IT&rsquo;S STILL THERE
                 </dt>
-                <dd className="mt-1 text-sm text-parchment/70">
+                <dd className="mt-1 text-sm text-foreground/70">
                   And if not, when and why it came down.
                 </dd>
               </div>
             </dl>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <p className="text-sm leading-relaxed text-foreground/70">
               A camera that gets quietly switched off after community pressure is as much a part
               of the record as one that goes up.
             </p>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <p className="text-sm leading-relaxed text-foreground/70">
               That&rsquo;s the record AusWatch keeps.
             </p>
           </section>
 
           <section className="flex flex-col gap-4">
-            <h2 className="font-heading text-base text-parchment">Licence</h2>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <h2 className="font-heading text-base text-foreground">Licence</h2>
+            <p className="text-sm leading-relaxed text-foreground/70">
               The AusWatch dataset (verified camera records and their history) is released under a{" "}
               <a
                 className={linkClass}
@@ -242,7 +242,7 @@ export default function AboutPage() {
               . Anyone can reuse, redistribute, or build on it, including commercially, as long as
               AusWatch is credited.
             </p>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <p className="text-sm leading-relaxed text-foreground/70">
               See the{" "}
               <Link href="/terms" className={linkClass}>
                 Terms of Service
@@ -252,15 +252,15 @@ export default function AboutPage() {
           </section>
 
           <section className="flex flex-col gap-4">
-            <h2 className="font-heading text-base text-parchment">What AusWatch is not</h2>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <h2 className="font-heading text-base text-foreground">What AusWatch is not</h2>
+            <p className="text-sm leading-relaxed text-foreground/70">
               It&rsquo;s not a tool for evading enforcement, and it&rsquo;s not a claim that any
               specific camera is doing something unlawful. AusWatch documents what&rsquo;s
               publicly observable: a camera exists, here&rsquo;s what&rsquo;s visible about it,
               and lets people draw their own conclusions. Submissions are moderated, and markers
               on sensitive sites are excluded on principle, not just for legal cover.
             </p>
-            <p className="text-sm leading-relaxed text-parchment/70">
+            <p className="text-sm leading-relaxed text-foreground/70">
               Reporting a camera never requires an account. AusWatch doesn&rsquo;t collect
               submitters&rsquo; names, emails, or IP addresses, only a hashed signal used to
               keep the review queue free of spam.

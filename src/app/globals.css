@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /*
- * "ink" is the page surface and "parchment" is the text on it. Both are
+ * "surface" is the page background and "foreground" is the text on it. Both are
  * defined as RGB triplets so Tailwind opacity modifiers keep working, and the
  * light theme swaps their roles rather than introducing new color names.
  *
@@ -12,16 +12,16 @@
  */
 :root {
   color-scheme: dark;
-  --color-ink-rgb: 18 24 29;
-  --color-parchment-rgb: 233 228 216;
+  --color-surface-rgb: 18 24 29;
+  --color-foreground-rgb: 233 228 216;
   --color-accent: #d9a441;
   --color-accent-rgb: 217 164 65;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-ink-rgb: 244 241 234;
-  --color-parchment-rgb: 26 33 39;
+  --color-surface-rgb: 244 241 234;
+  --color-foreground-rgb: 26 33 39;
   --color-accent: #8f6212;
   --color-accent-rgb: 143 98 18;
 }
@@ -29,14 +29,14 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
     color-scheme: light;
-    --color-ink-rgb: 244 241 234;
-    --color-parchment-rgb: 26 33 39;
+    --color-surface-rgb: 244 241 234;
+    --color-foreground-rgb: 26 33 39;
     --color-accent: #8f6212;
     --color-accent-rgb: 143 98 18;
   }
 }
 
 body {
-  background-color: rgb(var(--color-ink-rgb));
-  color: rgb(var(--color-parchment-rgb));
+  background-color: rgb(var(--color-surface-rgb));
+  color: rgb(var(--color-foreground-rgb));
 }

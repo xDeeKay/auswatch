@@ -10,7 +10,7 @@ import { PhotoPicker } from "@/components/PhotoPicker";
 
 const fieldLabel = "font-label text-xs text-amber";
 const inputClass =
-  "w-full rounded border border-parchment/20 bg-transparent px-3 py-2 text-sm text-parchment placeholder:text-parchment/30 focus:border-amber focus:outline-none";
+  "w-full rounded border border-foreground/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:border-amber focus:outline-none";
 
 type SubmitState = "idle" | "submitting" | "done" | "error";
 
@@ -80,8 +80,8 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
   if (state === "done") {
     return (
       <div className="mx-auto max-w-xl rounded border border-amber/30 bg-amber/5 p-6">
-        <p className="font-heading text-lg text-parchment">Correction received</p>
-        <p className="mt-2 text-sm text-parchment/70">
+        <p className="font-heading text-lg text-foreground">Correction received</p>
+        <p className="mt-2 text-sm text-foreground/70">
           Thank you. Your proposed correction is now in the review queue. It will not
           change the public map unless a moderator approves it.
         </p>
@@ -189,7 +189,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
         {fieldErrors.notes && <p className="text-xs text-error">{fieldErrors.notes[0]}</p>}
       </div>
 
-      <label className="flex items-start gap-3 rounded border border-parchment/20 px-3 py-2.5 text-sm text-parchment/85">
+      <label className="flex items-start gap-3 rounded border border-foreground/20 px-3 py-2.5 text-sm text-foreground/85">
         <input
           type="checkbox"
           checked={reportedRemoved}
@@ -204,7 +204,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
 
       <div className="flex flex-col gap-1.5">
         <label className={fieldLabel}>LOCATION</label>
-        <div className="h-72 overflow-hidden rounded border border-parchment/20">
+        <div className="h-72 overflow-hidden rounded border border-foreground/20">
           <LocationPicker value={location} onChange={setLocation} />
         </div>
       </div>
