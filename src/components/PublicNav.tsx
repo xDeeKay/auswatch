@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { NavDrawer } from "@/components/NavDrawer";
+import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const linkClass = "font-label text-sm text-foreground/70 transition hover:text-amber";
@@ -19,8 +20,7 @@ export function PublicNav() {
     <nav className="border-b border-foreground/10 px-6">
       <div className="flex w-full items-center justify-between py-3">
         <Link href="/" className="flex items-center gap-2.5 font-heading text-lg text-foreground">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/auswatch-logo.svg" alt="" width={22} height={29} />
+          <Logo />
           AusWatch
         </Link>
 
@@ -32,6 +32,8 @@ export function PublicNav() {
               </Link>
             ))}
           </div>
+
+          <span aria-hidden="true" className="mr-2 hidden h-5 w-px bg-foreground/10 md:block" />
 
           <ThemeToggle />
 

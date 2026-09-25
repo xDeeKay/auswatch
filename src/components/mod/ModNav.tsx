@@ -3,6 +3,7 @@ import { signOut } from "@/auth";
 import { ModeratorRole } from "@/generated/prisma/enums";
 import { cn } from "@/lib/cn";
 import { NavDrawer } from "@/components/NavDrawer";
+import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const linkClass =
@@ -26,8 +27,7 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
           href="/moderate"
           className="flex items-center gap-2.5 font-heading text-lg text-foreground"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/auswatch-logo.svg" alt="" width={22} height={29} />
+          <Logo />
           AusWatch
         </Link>
 
@@ -58,6 +58,8 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
               </button>
             </form>
           </div>
+
+          <span aria-hidden="true" className="mr-2 hidden h-5 w-px bg-foreground/10 md:block" />
 
           <ThemeToggle />
 
