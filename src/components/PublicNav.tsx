@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { NavDrawer } from "@/components/NavDrawer";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const linkClass = "font-label text-sm text-parchment/70 transition hover:text-amber";
 const itemClass = "px-5 first:pl-0";
@@ -23,21 +24,25 @@ export function PublicNav() {
           AusWatch
         </Link>
 
-        <div className="hidden items-center divide-x divide-parchment/10 md:flex">
-          {NAV_LINKS.map((item) => (
-            <Link key={item.href} href={item.href} className={cn(linkClass, itemClass)}>
-              {item.label}
-            </Link>
-          ))}
-        </div>
+        <div className="flex items-center gap-1">
+          <div className="hidden items-center divide-x divide-parchment/10 md:flex">
+            {NAV_LINKS.map((item) => (
+              <Link key={item.href} href={item.href} className={cn(linkClass, itemClass)}>
+                {item.label}
+              </Link>
+            ))}
+          </div>
 
-        <NavDrawer>
-          {NAV_LINKS.map((item) => (
-            <Link key={item.href} href={item.href} className={mobileLinkClass}>
-              {item.label}
-            </Link>
-          ))}
-        </NavDrawer>
+          <ThemeToggle />
+
+          <NavDrawer>
+            {NAV_LINKS.map((item) => (
+              <Link key={item.href} href={item.href} className={mobileLinkClass}>
+                {item.label}
+              </Link>
+            ))}
+          </NavDrawer>
+        </div>
       </div>
     </nav>
   );

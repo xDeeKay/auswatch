@@ -3,6 +3,7 @@ import { signOut } from "@/auth";
 import { ModeratorRole } from "@/generated/prisma/enums";
 import { cn } from "@/lib/cn";
 import { NavDrawer } from "@/components/NavDrawer";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const linkClass =
   "font-label text-sm text-parchment/70 transition hover:text-amber";
@@ -30,57 +31,61 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
           AusWatch
         </Link>
 
-        <div className="hidden items-center divide-x divide-parchment/10 md:flex">
-          <Link href="/moderate" className={cn(linkClass, itemClass)}>
-            Queue
-          </Link>
-          <Link href="/moderate/cameras" className={cn(linkClass, itemClass)}>
-            Cameras
-          </Link>
-          {isAdmin && (
-            <>
-              <Link href="/admin/moderators" className={cn(linkClass, itemClass)}>
-                Moderators
-              </Link>
-              <Link href="/admin/audit-log" className={cn(linkClass, itemClass)}>
-                Audit log
-              </Link>
-            </>
-          )}
-          <span className={cn("font-label text-xs text-parchment/50", itemClass)}>
-            {userLabel}
-          </span>
-          <form action={signOutAction} className={itemClass}>
-            <button type="submit" className={linkClass}>
-              Sign out
-            </button>
-          </form>
-        </div>
+        <div className="flex items-center gap-1">
+          <div className="hidden items-center divide-x divide-parchment/10 md:flex">
+            <Link href="/moderate" className={cn(linkClass, itemClass)}>
+              Queue
+            </Link>
+            <Link href="/moderate/cameras" className={cn(linkClass, itemClass)}>
+              Cameras
+            </Link>
+            {isAdmin && (
+              <>
+                <Link href="/admin/moderators" className={cn(linkClass, itemClass)}>
+                  Moderators
+                </Link>
+                <Link href="/admin/audit-log" className={cn(linkClass, itemClass)}>
+                  Audit log
+                </Link>
+              </>
+            )}
+            <span className={cn("font-label text-xs text-parchment/50", itemClass)}>
+              {userLabel}
+            </span>
+            <form action={signOutAction} className={itemClass}>
+              <button type="submit" className={linkClass}>
+                Sign out
+              </button>
+            </form>
+          </div>
 
-        <NavDrawer>
-          <Link href="/moderate" className={mobileLinkClass}>
-            Queue
-          </Link>
-          <Link href="/moderate/cameras" className={mobileLinkClass}>
-            Cameras
-          </Link>
-          {isAdmin && (
-            <>
-              <Link href="/admin/moderators" className={mobileLinkClass}>
-                Moderators
-              </Link>
-              <Link href="/admin/audit-log" className={mobileLinkClass}>
-                Audit log
-              </Link>
-            </>
-          )}
-          <div className="py-3 font-label text-xs text-parchment/50">{userLabel}</div>
-          <form action={signOutAction}>
-            <button type="submit" className={cn(mobileLinkClass, "w-full text-left")}>
-              Sign out
-            </button>
-          </form>
-        </NavDrawer>
+          <ThemeToggle />
+
+          <NavDrawer>
+            <Link href="/moderate" className={mobileLinkClass}>
+              Queue
+            </Link>
+            <Link href="/moderate/cameras" className={mobileLinkClass}>
+              Cameras
+            </Link>
+            {isAdmin && (
+              <>
+                <Link href="/admin/moderators" className={mobileLinkClass}>
+                  Moderators
+                </Link>
+                <Link href="/admin/audit-log" className={mobileLinkClass}>
+                  Audit log
+                </Link>
+              </>
+            )}
+            <div className="py-3 font-label text-xs text-parchment/50">{userLabel}</div>
+            <form action={signOutAction}>
+              <button type="submit" className={cn(mobileLinkClass, "w-full text-left")}>
+                Sign out
+              </button>
+            </form>
+          </NavDrawer>
+        </div>
       </div>
     </nav>
   );

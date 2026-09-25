@@ -14,8 +14,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#12181D",
-        parchment: "#E9E4D8",
+        ink: withOpacity("--color-ink-rgb"),
+        parchment: withOpacity("--color-parchment-rgb"),
         amber: withOpacity("--color-accent-rgb"),
         status: {
           active: "#C1443D",
