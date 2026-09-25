@@ -1,4 +1,5 @@
 .leaflet-container {
+  isolation: isolate;
   background: #232b34;
   font-family: var(--font-body), sans-serif;
 }
