@@ -35,7 +35,7 @@ export default function TicketLocationMapView({
   const [basemapReady, setBasemapReady] = useState(false);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative isolate h-full w-full">
       <MapContainer
         center={[lat, lng]}
         zoom={14}

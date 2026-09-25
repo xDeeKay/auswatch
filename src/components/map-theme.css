@@ -14,6 +14,7 @@
  */
 .auswatch-map-frame {
   position: relative;
+  isolation: isolate;
   container-type: size;
   container-name: auswatch-map;
 }

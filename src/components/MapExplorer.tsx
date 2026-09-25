@@ -141,7 +141,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
   }
 
   return (
-    <div className="relative flex h-full">
+    <div className="relative isolate flex h-full">
       <aside
         className={`absolute inset-y-0 left-0 z-[1300] flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-foreground/10 bg-surface p-4 transition-transform duration-200 desktop:static desktop:translate-x-0 ${
           filtersOpen ? "translate-x-0" : "-translate-x-full"
