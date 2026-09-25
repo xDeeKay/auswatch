@@ -10,6 +10,7 @@ import { VectorBasemap } from "@/components/VectorBasemap";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
 import { MapSearch } from "@/components/MapSearch";
+import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 
 const FIT_PADDING = { padding: [20, 20] as [number, number] };
 
@@ -48,6 +49,7 @@ export default function LocationPickerView({
   );
 
   const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null);
+  const [basemapReady, setBasemapReady] = useState(false);
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -66,7 +68,7 @@ export default function LocationPickerView({
         >
           <ZoomControl position="bottomleft" />
           {!value && <FitBounds bounds={AUSTRALIA_BOUNDS} options={FIT_PADDING} />}
-          <VectorBasemap />
+          <VectorBasemap onReady={() => setBasemapReady(true)} />
           <MapFlyTo target={flyTarget} />
           <ClickHandler onChange={onChange} />
           {value && (
@@ -84,6 +86,8 @@ export default function LocationPickerView({
             />
           )}
         </MapContainer>
+
+        <MapLoadingOverlay ready={basemapReady} />
 
         <div className="absolute left-3 top-3 z-[900]">
           <MapSearch onSelect={setFlyTarget} />

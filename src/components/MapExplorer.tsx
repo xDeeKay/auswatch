@@ -3,6 +3,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import MapView from "@/components/MapView";
 import { MapSearch } from "@/components/MapSearch";
+import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 import type { FlyTarget } from "@/components/MapFlyTo";
 import { AuState, CameraStatus, CameraType, OperatorCategory } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
@@ -260,11 +261,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
           flyTarget={flyTarget}
         />
 
-        {!basemapReady && (
-          <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-surface font-label text-sm text-foreground/50">
-            Loading map&hellip;
-          </div>
-        )}
+        <MapLoadingOverlay ready={basemapReady} />
 
         <div className="absolute left-3 top-3 z-[900]">
           <MapSearch onSelect={setFlyTarget} />

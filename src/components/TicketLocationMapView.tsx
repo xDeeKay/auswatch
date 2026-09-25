@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./map-theme.css";
 import { MapContainer, Marker } from "react-leaflet";
 import { AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
+import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 
 const markerIcon = L.divIcon({
   className: "auswatch-marker",
@@ -30,23 +32,28 @@ export default function TicketLocationMapView({
   lng: number;
   sensitiveSites?: { lat: number; lng: number }[];
 }) {
+  const [basemapReady, setBasemapReady] = useState(false);
+
   return (
-    <MapContainer
-      center={[lat, lng]}
-      zoom={14}
-      maxBounds={AUSTRALIA_MAX_BOUNDS}
-      maxBoundsViscosity={1.0}
-      minZoom={MIN_ZOOM}
-      maxZoom={MAX_ZOOM}
-      zoomSnap={0.1}
-      preferCanvas
-      className="h-full w-full"
-    >
-      <VectorBasemap />
-      {sensitiveSites?.map((site, i) => (
-        <Marker key={i} position={[site.lat, site.lng]} icon={sensitiveSiteIcon} />
-      ))}
-      <Marker position={[lat, lng]} icon={markerIcon} />
-    </MapContainer>
+    <div className="relative h-full w-full">
+      <MapContainer
+        center={[lat, lng]}
+        zoom={14}
+        maxBounds={AUSTRALIA_MAX_BOUNDS}
+        maxBoundsViscosity={1.0}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        zoomSnap={0.1}
+        preferCanvas
+        className="h-full w-full"
+      >
+        <VectorBasemap onReady={() => setBasemapReady(true)} />
+        {sensitiveSites?.map((site, i) => (
+          <Marker key={i} position={[site.lat, site.lng]} icon={sensitiveSiteIcon} />
+        ))}
+        <Marker position={[lat, lng]} icon={markerIcon} />
+      </MapContainer>
+      <MapLoadingOverlay ready={basemapReady} />
+    </div>
   );
 }
