@@ -7,7 +7,7 @@ import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const linkClass =
-  "font-label text-sm text-foreground/70 transition hover:text-amber";
+  "whitespace-nowrap font-label text-sm text-foreground/70 transition hover:text-amber";
 const itemClass = "px-5 first:pl-0";
 const mobileLinkClass =
   "block py-3 font-label text-sm text-foreground/70 transition hover:text-amber";
@@ -22,17 +22,17 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
 
   return (
     <nav className="border-b border-foreground/10 px-6">
-      <div className="flex w-full items-center justify-between py-3">
+      <div className="flex w-full items-center justify-between gap-6 py-3">
         <Link
           href="/moderate"
-          className="flex items-center gap-2.5 font-heading text-lg text-foreground"
+          className="flex shrink-0 items-center gap-2.5 font-heading text-lg text-foreground"
         >
           <Logo />
           AusWatch
         </Link>
 
-        <div className="flex items-center gap-1">
-          <div className="hidden items-center divide-x divide-foreground/10 md:flex">
+        <div className="flex min-w-0 items-center gap-1">
+          <div className="hidden min-w-0 items-center divide-x divide-foreground/10 desktop:flex">
             <Link href="/moderate" className={cn(linkClass, itemClass)}>
               Queue
             </Link>
@@ -49,7 +49,10 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
                 </Link>
               </>
             )}
-            <span className={cn("font-label text-xs text-foreground/50", itemClass)}>
+            <span
+              title={userLabel}
+              className={cn("min-w-0 max-w-[16rem] truncate font-label text-xs text-foreground/50", itemClass)}
+            >
               {userLabel}
             </span>
             <form action={signOutAction} className={itemClass}>
@@ -59,7 +62,7 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
             </form>
           </div>
 
-          <span aria-hidden="true" className="mr-2 hidden h-5 w-px bg-foreground/10 md:block" />
+          <span aria-hidden="true" className="mr-2 hidden h-5 w-px bg-foreground/10 desktop:block" />
 
           <ThemeToggle />
 

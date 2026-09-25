@@ -188,8 +188,8 @@ export default async function CameraDetailPage({
         }
       />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
-        <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+      <div className="grid grid-cols-1 gap-8 desktop:grid-cols-[1fr_340px]">
+        <div className="flex flex-col gap-4 desktop:col-start-1 desktop:row-start-1">
           <table className="w-full table-fixed text-sm">
             <tbody>
               {isPending && (
@@ -344,7 +344,7 @@ export default async function CameraDetailPage({
         </div>
 
         {(isPending || canActOnCamera || camera.correctionReports.length > 0) && (
-          <div className="flex flex-col gap-6 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+          <div className="flex flex-col gap-6 desktop:sticky desktop:top-6 desktop:col-start-2 desktop:row-start-1 desktop:row-span-2">
             {isPending && (
               <section className="flex flex-col gap-3">
                 {canActOnCamera ? (
@@ -513,7 +513,7 @@ export default async function CameraDetailPage({
           </div>
         )}
 
-        <div className="flex flex-col gap-8 lg:col-start-1 lg:row-start-2">
+        <div className="flex flex-col gap-8 desktop:col-start-1 desktop:row-start-2">
           {(camera.photos.length > 0 || camera.correctionReports.some((c) => c.photos.length > 0)) && (
             <section className="flex flex-col gap-3">
               <h2 className="font-heading text-base text-foreground">Photo evidence</h2>

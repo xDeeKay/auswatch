@@ -143,7 +143,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
   return (
     <div className="relative flex h-full">
       <aside
-        className={`absolute inset-y-0 left-0 z-[1300] flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-foreground/10 bg-surface p-4 transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`absolute inset-y-0 left-0 z-[1300] flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-foreground/10 bg-surface p-4 transition-transform duration-200 desktop:static desktop:translate-x-0 ${
           filtersOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -153,7 +153,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
             type="button"
             onClick={() => setFiltersOpen(false)}
             aria-label="Close"
-            className="font-label text-lg text-foreground/40 hover:text-foreground lg:hidden"
+            className="font-label text-lg text-foreground/40 hover:text-foreground desktop:hidden"
           >
             &times;
           </button>
@@ -248,7 +248,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
           type="button"
           aria-label="Close filters"
           onClick={() => setFiltersOpen(false)}
-          className="absolute inset-0 z-[1200] border-0 bg-surface/70 p-0 lg:hidden"
+          className="absolute inset-0 z-[1200] border-0 bg-surface/70 p-0 desktop:hidden"
         />
       )}
 
@@ -270,13 +270,13 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
-          className="absolute right-3 top-3 z-[900] rounded border border-foreground/20 bg-surface/90 px-3 py-1.5 font-label text-xs text-foreground shadow lg:hidden"
+          className="absolute right-3 top-3 z-[900] rounded border border-foreground/20 bg-surface/90 px-3 py-1.5 font-label text-xs text-foreground shadow desktop:hidden"
         >
           Filters
         </button>
 
         {selectedCamera && (
-          <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-foreground/10 bg-surface p-5 lg:inset-y-0 lg:inset-x-auto lg:right-0 lg:w-80 lg:bg-surface/95">
+          <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-foreground/10 bg-surface p-5 desktop:inset-y-0 desktop:inset-x-auto desktop:right-0 desktop:w-80 desktop:bg-surface/95">
             <div className="flex items-start justify-between gap-2">
               <h2 className="font-heading text-base text-foreground">{TYPE_LABEL[selectedCamera.type]}</h2>
               <button

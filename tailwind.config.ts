@@ -13,6 +13,9 @@ const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
+      screens: {
+        desktop: "1024px",
+      },
       colors: {
         surface: withOpacity("--color-surface-rgb"),
         foreground: withOpacity("--color-foreground-rgb"),

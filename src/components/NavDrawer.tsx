@@ -20,7 +20,7 @@ export function NavDrawer({ children }: { children: React.ReactNode }) {
   }, [open]);
 
   return (
-    <div className="md:hidden">
+    <div className="desktop:hidden">
       <button
         type="button"
         onClick={() => setOpen(true)}
