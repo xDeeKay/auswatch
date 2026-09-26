@@ -13,6 +13,7 @@ import type { PublicCamera } from "@/lib/cameras";
 import { TYPE_COLOR } from "@/lib/camera-labels";
 import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
+import { BasemapToggle } from "@/components/BasemapToggle";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
 
@@ -102,6 +103,7 @@ export default function MapView({
       <ZoomControl position="bottomleft" />
       <FitBounds bounds={AUSTRALIA_BOUNDS} options={FIT_PADDING} />
       <VectorBasemap onReady={onBasemapReady} />
+      <BasemapToggle />
       <MapFlyTo target={flyTarget ?? null} />
       <ClusterZoomSync clusterRef={clusterRef} />
       <MarkerClusterGroup ref={clusterRef} iconCreateFunction={clusterIcon} animate={false}>

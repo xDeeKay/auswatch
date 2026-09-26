@@ -7,6 +7,7 @@ import "./map-theme.css";
 import { MapContainer, Marker } from "react-leaflet";
 import { AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
+import { BasemapToggle } from "@/components/BasemapToggle";
 import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 
 const markerIcon = L.divIcon({
@@ -49,6 +50,7 @@ export default function TicketLocationMapView({
         className="h-full w-full"
       >
         <VectorBasemap onReady={() => setBasemapReady(true)} />
+        <BasemapToggle />
         {sensitiveSites?.map((site, i) => (
           <Marker key={i} position={[site.lat, site.lng]} icon={sensitiveSiteIcon} />
         ))}

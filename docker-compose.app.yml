@@ -4,7 +4,10 @@ networks:
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_ARCGIS_API_KEY: ${NEXT_PUBLIC_ARCGIS_API_KEY:-}
     restart: unless-stopped
     env_file: .env
     ports:

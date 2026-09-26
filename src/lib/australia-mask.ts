@@ -49,6 +49,12 @@ const AUSTRALIA_RING: number[][] = [
   [100, -47],
 ];
 
+// The same open-ocean outline as a region to test features against, for
+// styles that cannot use a filled mask.
+export function buildAustraliaRegion(): GeoJSON.Polygon {
+    return { type: "Polygon", coordinates: [AUSTRALIA_RING] };
+}
+
 function signedArea(ring: number[][]): number {
   let sum = 0;
   for (let i = 0; i < ring.length; i++) {

@@ -9,6 +9,8 @@ RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ARG NEXT_PUBLIC_ARCGIS_API_KEY
+ENV NEXT_PUBLIC_ARCGIS_API_KEY=$NEXT_PUBLIC_ARCGIS_API_KEY
 RUN npx prisma generate
 RUN node scripts/copy-maplibre-worker.js
 RUN npm run build

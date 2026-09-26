@@ -14,14 +14,19 @@ import {
   CARTO_LIGHT_STYLE_URL,
   CARTO_RASTER_URL,
   DARK_MATTER_OVERRIDES,
+  ESRI_ATTRIBUTION,
+  ESRI_IMAGERY_TILE_URL,
   REGIONAL_CITIES,
   SUBURB_LABEL_MIN_ZOOM,
   WATER_COLOR,
 } from "@/lib/map-constants";
+import { applySatelliteStyle } from "@/lib/satellite-style";
+import type { BasemapView } from "@/lib/basemap-view";
 import { LIGHT_MAP_OVERRIDES, LIGHT_WATER_COLOR } from "@/lib/map-light-overrides";
-import { buildAustraliaMask } from "@/lib/australia-mask";
+import { buildAustraliaMask, buildAustraliaRegion } from "@/lib/australia-mask";
 import type { ResolvedTheme } from "@/lib/theme";
 import { useResolvedTheme } from "./useResolvedTheme";
+import { useBasemapView } from "./useBasemapView";
 
 type StyleLayer = {
   id: string;
@@ -34,7 +39,7 @@ type StyleLayer = {
   layout?: Record<string, unknown>;
   paint?: Record<string, unknown>;
 };
-type Style = { layers: StyleLayer[]; sources: Record<string, unknown> };
+type Style = { layers: StyleLayer[]; sources: Record<string, unknown>; transition?: { duration: number; delay: number } };
 
 // The city layers hand off to place_city_r5/r6 at maxzoom 8 (their own
 // minzoom), which avoids drawing the same city twice once the stock style's
@@ -124,6 +129,22 @@ const MAP_THEMES: Record<ResolvedTheme, MapThemeConfig> = {
   },
 };
 
+// Satellite view is the dark style's labels and boundaries over imagery, so the
+// light theme has no satellite variant of its own.
+type BasemapKey = ResolvedTheme | "satellite";
+
+function basemapKeyFor(theme: ResolvedTheme, view: BasemapView): BasemapKey {
+  return view === "satellite" ? "satellite" : theme;
+}
+
+function configFor(key: BasemapKey): MapThemeConfig {
+  return MAP_THEMES[key === "satellite" ? "dark" : key];
+}
+
+function rasterUrlFor(key: BasemapKey): string {
+  return key === "satellite" ? ESRI_IMAGERY_TILE_URL : MAP_THEMES[key].rasterUrl;
+}
+
 // maplibre-gl locates its worker script via import.meta.url, which only
 // resolves to a real, fetchable location when the module loads as a native
 // ES module - once webpack bundles it into an app chunk, that URL points at
@@ -190,8 +211,8 @@ function startLabelsAt(layer: StyleLayer, minZoom: number): void {
   if (size?.stops && first && first[0] > minZoom) size.stops.unshift([minZoom, first[1]]);
 }
 
-async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
-  const config = MAP_THEMES[theme];
+async function fetchStyle(key: BasemapKey): Promise<Style> {
+  const config = configFor(key);
   const response = await fetch(config.styleUrl);
   if (!response.ok) throw new Error(`CARTO style fetch returned ${response.status}`);
   const style = (await response.json()) as Style;
@@ -214,49 +235,69 @@ async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
 
   // Painted last (on top of every other layer, including neighbouring
   // countries' place labels and roads) rather than filtering each of the
-  // style's ~90 layers individually - see buildAustraliaMask().
-  style.sources["au-mask"] = { type: "geojson", data: buildAustraliaMask() };
-  style.layers.push({
-    id: "au-mask-fill",
-    type: "fill",
-    source: "au-mask",
-    paint: { "fill-color": config.waterColor, "fill-opacity": 1 },
-  });
+  // style's ~90 layers individually - see buildAustraliaMask(). Satellite view
+  // goes without it: a flat fill would cut a hard edge across the imagery.
+  if (key === "satellite") {
+    applySatelliteStyle(style as never, ESRI_IMAGERY_TILE_URL, buildAustraliaRegion());
+  } else {
+    style.sources["au-mask"] = { type: "geojson", data: buildAustraliaMask() };
+    style.layers.push({
+      id: "au-mask-fill",
+      type: "fill",
+      source: "au-mask",
+      paint: { "fill-color": config.waterColor, "fill-opacity": 1 },
+    });
+  }
+
+  // Paint changes fade over 300ms by default. Between two basemaps that starts
+  // the new one from the old one's colours, which reads as a flash of the other
+  // theme.
+  style.transition = { duration: 0, delay: 0 };
 
   return style;
 }
 
-// Each theme's style is fetched once and reused when the theme is switched
-// back. Callers get a copy because MapLibre takes ownership of what it is
-// given.
-const styleCache = new Map<ResolvedTheme, Promise<Style>>();
+// Each basemap's style is fetched once and reused when it is switched back to.
+// Callers get a copy because MapLibre takes ownership of what it is given.
+const styleCache = new Map<BasemapKey, Promise<Style>>();
 
-async function loadStyle(theme: ResolvedTheme): Promise<Style> {
-  let cached = styleCache.get(theme);
+async function loadStyle(key: BasemapKey): Promise<Style> {
+  let cached = styleCache.get(key);
   if (!cached) {
-    cached = fetchStyle(theme);
-    styleCache.set(theme, cached);
-    cached.catch(() => styleCache.delete(theme));
+    cached = fetchStyle(key);
+    styleCache.set(key, cached);
+    cached.catch(() => styleCache.delete(key));
   }
   return structuredClone(await cached);
 }
 
 type BasemapState =
-  | { kind: "gl"; layer: ReturnType<typeof L.maplibreGL>; theme: ResolvedTheme; removed: boolean }
-  | { kind: "raster"; layer: L.TileLayer; theme: ResolvedTheme; removed: boolean };
+  | { kind: "gl"; layer: ReturnType<typeof L.maplibreGL>; key: BasemapKey; removed: boolean; credited: boolean }
+  | { kind: "raster"; layer: L.TileLayer; key: BasemapKey; removed: boolean; credited: boolean };
 
-function applyTheme(state: BasemapState, theme: ResolvedTheme): void {
-  if (state.theme === theme) return;
-  state.theme = theme;
+// Esri's credit has to show only while its imagery does. The vector source's
+// own attribution is added once by the plugin, so only this one is managed here.
+function syncEsriCredit(map: L.Map, state: BasemapState): void {
+  const wanted = state.key === "satellite";
+  if (wanted === state.credited) return;
+  if (wanted) map.attributionControl?.addAttribution(ESRI_ATTRIBUTION);
+  else map.attributionControl?.removeAttribution(ESRI_ATTRIBUTION);
+  state.credited = wanted;
+}
+
+function applyBasemapKey(map: L.Map, state: BasemapState, key: BasemapKey): void {
+  if (state.key === key) return;
+  state.key = key;
+  syncEsriCredit(map, state);
 
   if (state.kind === "raster") {
-    state.layer.setUrl(MAP_THEMES[theme].rasterUrl);
+    state.layer.setUrl(rasterUrlFor(key));
     return;
   }
 
-  loadStyle(theme)
+  loadStyle(key)
     .then((style) => {
-      if (state.removed || state.theme !== theme) return;
+      if (state.removed || state.key !== key) return;
       state.layer.getMaplibreMap().setStyle(style as never);
     })
     .catch((error) => console.error("Basemap style change failed:", error));
@@ -270,35 +311,39 @@ function applyTheme(state: BasemapState, theme: ResolvedTheme): void {
 export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
   const map = useMap();
   const theme = useResolvedTheme();
+  const view = useBasemapView();
+  const key = basemapKeyFor(theme, view);
   const stateRef = useRef<BasemapState | null>(null);
 
-  // Callers pass a fresh inline callback every render, and the theme can change
-  // while the basemap is still loading. Listing either as a dependency of the
-  // effect below would rebuild the whole basemap, so it reads the latest of
-  // each through a ref instead.
+  // Callers pass a fresh inline callback every render, and the theme or view
+  // can change while the basemap is still loading. Listing either as a
+  // dependency of the effect below would rebuild the whole basemap, so it reads
+  // the latest of each through a ref instead.
   const onReadyRef = useRef(onReady);
-  const themeRef = useRef(theme);
+  const keyRef = useRef(key);
   useEffect(() => {
     onReadyRef.current = onReady;
-    themeRef.current = theme;
+    keyRef.current = key;
   });
 
   useEffect(() => {
     let cancelled = false;
 
     function addRaster() {
-      const initialTheme = themeRef.current;
-      const layer = L.tileLayer(MAP_THEMES[initialTheme].rasterUrl, { attribution: CARTO_ATTRIBUTION, maxZoom: 19 });
+      const initialKey = keyRef.current;
+      const layer = L.tileLayer(rasterUrlFor(initialKey), { attribution: CARTO_ATTRIBUTION, maxZoom: 19 });
       layer.once("load", () => onReadyRef.current?.());
       layer.addTo(map);
-      stateRef.current = { kind: "raster", layer, theme: initialTheme, removed: false };
+      const state: BasemapState = { kind: "raster", layer, key: initialKey, removed: false, credited: false };
+      stateRef.current = state;
+      syncEsriCredit(map, state);
     }
 
     if (!hasWebGL()) {
       addRaster();
     } else {
-      const initialTheme = themeRef.current;
-      loadStyle(initialTheme)
+      const initialKey = keyRef.current;
+      loadStyle(initialKey)
         .then((style) => {
           if (cancelled) return;
           // Attribution comes from the vector source's own TileJSON at
@@ -306,10 +351,11 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
           // maplibre source), not from an option passed in here.
           const layer = L.maplibreGL({ style: style as never });
           layer.addTo(map);
-          const state: BasemapState = { kind: "gl", layer, theme: initialTheme, removed: false };
+          const state: BasemapState = { kind: "gl", layer, key: initialKey, removed: false, credited: false };
           stateRef.current = state;
+          syncEsriCredit(map, state);
           layer.getMaplibreMap().once("load", () => onReadyRef.current?.());
-          applyTheme(state, themeRef.current);
+          applyBasemapKey(map, state, keyRef.current);
         })
         .catch((error) => {
           console.error("Vector basemap failed to load, falling back to raster tiles:", error);
@@ -322,6 +368,7 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
       const state = stateRef.current;
       if (state) {
         state.removed = true;
+        if (state.credited) map.attributionControl?.removeAttribution(ESRI_ATTRIBUTION);
         map.removeLayer(state.layer);
         stateRef.current = null;
       }
@@ -329,8 +376,8 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
   }, [map]);
 
   useEffect(() => {
-    if (stateRef.current) applyTheme(stateRef.current, theme);
-  }, [theme]);
+    if (stateRef.current) applyBasemapKey(map, stateRef.current, key);
+  }, [map, key]);
 
   return null;
 }

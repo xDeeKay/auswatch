@@ -16,7 +16,7 @@
   --color-foreground-rgb: 233 228 216;
   --color-accent: #d9a441;
   --color-accent-rgb: 217 164 65;
-  --color-map-land: #232b34;
+  --color-map-backdrop: #232b34;
 }
 
 :root[data-theme="light"] {
@@ -25,7 +25,7 @@
   --color-foreground-rgb: 26 33 39;
   --color-accent: #8f6212;
   --color-accent-rgb: 143 98 18;
-  --color-map-land: #e9e4d8;
+  --color-map-backdrop: #c9d3d6;
 }
 
 @media (prefers-color-scheme: light) {
@@ -35,7 +35,7 @@
     --color-foreground-rgb: 26 33 39;
     --color-accent: #8f6212;
     --color-accent-rgb: 143 98 18;
-    --color-map-land: #e9e4d8;
+    --color-map-backdrop: #c9d3d6;
   }
 }
 

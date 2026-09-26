@@ -96,6 +96,15 @@ export const CARTO_DARK_MATTER_STYLE_URL = "https://basemaps.cartocdn.com/gl/dar
 export const CARTO_RASTER_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 export const CARTO_LIGHT_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 export const CARTO_LIGHT_RASTER_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
+// The key ships to the browser, so it must be restricted to our domains in the
+// Esri dashboard. Satellite view stays off when it is not set. Read at build
+// time (NEXT_PUBLIC_), so the Docker build has to be given it.
+export const ESRI_API_KEY = process.env.NEXT_PUBLIC_ARCGIS_API_KEY ?? "";
+export const SATELLITE_AVAILABLE = ESRI_API_KEY !== "";
+export const ESRI_IMAGERY_TILE_URL = `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${ESRI_API_KEY}`;
+export const ESRI_ATTRIBUTION =
+  '<a href="https://www.esri.com" target="_blank" rel="noopener noreferrer">Powered by Esri</a> | Source: Esri, Vantor, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community';
 export const CARTO_ATTRIBUTION = "&copy; OpenStreetMap &copy; CARTO";
 
 // Repaints CARTO's dark-matter vector style onto AusWatch's own palette

@@ -7,6 +7,7 @@ import "./map-theme.css";
 import { MapContainer, Marker, ZoomControl, useMapEvents } from "react-leaflet";
 import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
+import { BasemapToggle } from "@/components/BasemapToggle";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
 import { MapSearch } from "@/components/MapSearch";
@@ -70,6 +71,7 @@ export default function LocationPickerView({
           <ZoomControl position="bottomleft" />
           {!value && <FitBounds bounds={AUSTRALIA_BOUNDS} options={FIT_PADDING} />}
           <VectorBasemap onReady={() => setBasemapReady(true)} />
+          <BasemapToggle />
           <MapFlyTo target={flyTarget} />
           <ClickHandler onChange={onChange} />
           {value && (
