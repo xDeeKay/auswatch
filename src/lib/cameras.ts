@@ -4,6 +4,7 @@ import {
   CameraStatus,
   CameraType,
   CaptureType,
+  ExternalImportSource,
   HistoryEventType,
   ModerationState,
   OperatorCategory,
@@ -30,6 +31,8 @@ export type PublicCamera = {
   state: AuState | null;
   history: PublicHistoryEvent[];
 };
+
+export type PublicCameraDetail = PublicCamera & { externalSource: ExternalImportSource | null };
 
 export type CorrectableCamera = {
   id: string;
@@ -82,11 +85,12 @@ export async function getCameras(): Promise<PublicCamera[]> {
   });
 }
 
-export async function getPublicCameraById(id: string): Promise<PublicCamera | null> {
+export async function getPublicCameraById(id: string): Promise<PublicCameraDetail | null> {
   return prisma.camera.findUnique({
     where: { id, moderationState: ModerationState.verified },
     select: {
       id: true,
+      externalSource: true,
       lat: true,
       lng: true,
       type: true,

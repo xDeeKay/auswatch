@@ -27,6 +27,7 @@ import { addCameraNote } from "@/lib/actions/camera-notes";
 import { overrideCameraState } from "@/lib/actions/camera-state";
 import { revertAuditLogEntry } from "@/lib/actions/audit-log";
 import { requireModerator, canView, canAct } from "@/lib/moderator-access";
+import { getSourceAttribution } from "@/lib/source-attribution";
 import { AuState } from "@/generated/prisma/enums";
 import { STATE_LABEL } from "@/lib/au-state-labels";
 import { AUDIT_ACTION_LABEL } from "@/lib/audit-labels";
@@ -124,6 +125,7 @@ export default async function CameraDetailPage({
   }
 
   const canActOnCamera = canAct(profile, { state: camera.state, type: camera.type });
+  const sourceAttribution = getSourceAttribution(camera.externalSource);
   const isAdmin = profile.role === ModeratorRole.admin;
   const isPending = camera.moderationState === ModerationState.pending;
 
@@ -276,6 +278,16 @@ export default async function CameraDetailPage({
                   {proposedSuffix("notes")}
                 </td>
               </tr>
+              {sourceAttribution && (
+                <tr className="border-t border-foreground/10">
+                  <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
+                    IMPORTED FROM
+                  </th>
+                  <td className="py-1.5 text-foreground/85">
+                    {sourceAttribution.credit} ({sourceAttribution.licence})
+                  </td>
+                </tr>
+              )}
               <tr className="border-t border-foreground/10">
                 <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
                   STATE/TERRITORY

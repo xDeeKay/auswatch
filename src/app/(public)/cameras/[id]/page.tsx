@@ -10,6 +10,8 @@ import {
   STATUS_LABEL,
   TYPE_LABEL,
 } from "@/lib/camera-labels";
+import { getSourceAttribution } from "@/lib/source-attribution";
+import { SourceCredit } from "@/components/SourceCredit";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 
@@ -34,6 +36,8 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
   if (!camera) {
     notFound();
   }
+
+  const attribution = getSourceAttribution(camera.externalSource);
 
   return (
     <div className="px-6 py-6">
@@ -75,6 +79,8 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
                 <p className="mt-2 text-sm text-foreground/70">{camera.notes}</p>
               </div>
             )}
+
+            {attribution && <SourceCredit attribution={attribution} />}
           </section>
 
           <aside className="flex flex-col gap-4 rounded border border-foreground/10 p-4 text-sm">
