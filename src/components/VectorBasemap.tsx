@@ -5,8 +5,21 @@ import L from "leaflet";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "@maplibre/maplibre-gl-leaflet";
 import { useMap } from "react-leaflet";
-import { CAPITAL_CITY_NAMES, CARTO_ATTRIBUTION, CARTO_DARK_MATTER_STYLE_URL, CARTO_RASTER_URL, DARK_MATTER_OVERRIDES, MIN_ZOOM, WATER_COLOR } from "@/lib/map-constants";
+import {
+  CAPITAL_CITY_NAMES,
+  CARTO_ATTRIBUTION,
+  CARTO_DARK_MATTER_STYLE_URL,
+  CARTO_LIGHT_RASTER_URL,
+  CARTO_LIGHT_STYLE_URL,
+  CARTO_RASTER_URL,
+  DARK_MATTER_OVERRIDES,
+  MIN_ZOOM,
+  WATER_COLOR,
+} from "@/lib/map-constants";
+import { LIGHT_MAP_OVERRIDES, LIGHT_WATER_COLOR } from "@/lib/map-light-overrides";
 import { buildAustraliaMask } from "@/lib/australia-mask";
+import type { ResolvedTheme } from "@/lib/theme";
+import { useResolvedTheme } from "./useResolvedTheme";
 
 type StyleLayer = {
   id: string;
@@ -46,11 +59,40 @@ const CAPITAL_CITY_LAYER: StyleLayer = {
     "text-keep-upright": true,
     "text-offset": [0.2, 0.2],
   },
-  paint: {
-    "text-color": "rgba(233, 228, 216, 0.85)",
-    "icon-color": "rgba(217, 164, 65, 0.9)",
-    "text-halo-color": "#0a0d11",
-    "text-halo-width": 1,
+};
+
+type MapThemeConfig = {
+  styleUrl: string;
+  rasterUrl: string;
+  overrides: Record<string, Record<string, string | number>>;
+  waterColor: string;
+  capitalPaint: Record<string, string | number>;
+};
+
+const MAP_THEMES: Record<ResolvedTheme, MapThemeConfig> = {
+  dark: {
+    styleUrl: CARTO_DARK_MATTER_STYLE_URL,
+    rasterUrl: CARTO_RASTER_URL,
+    overrides: DARK_MATTER_OVERRIDES,
+    waterColor: WATER_COLOR,
+    capitalPaint: {
+      "text-color": "rgba(233, 228, 216, 0.85)",
+      "icon-color": "rgba(217, 164, 65, 0.9)",
+      "text-halo-color": "#0a0d11",
+      "text-halo-width": 1,
+    },
+  },
+  light: {
+    styleUrl: CARTO_LIGHT_STYLE_URL,
+    rasterUrl: CARTO_LIGHT_RASTER_URL,
+    overrides: LIGHT_MAP_OVERRIDES,
+    waterColor: LIGHT_WATER_COLOR,
+    capitalPaint: {
+      "text-color": "rgba(26, 33, 39, 0.9)",
+      "icon-color": "rgba(143, 98, 18, 0.95)",
+      "text-halo-color": "#f4f1ea",
+      "text-halo-width": 1,
+    },
   },
 };
 
@@ -63,15 +105,16 @@ function hasWebGL(): boolean {
   }
 }
 
-async function loadDarkMatterStyle(): Promise<Style> {
-  const response = await fetch(CARTO_DARK_MATTER_STYLE_URL);
+async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
+  const config = MAP_THEMES[theme];
+  const response = await fetch(config.styleUrl);
   if (!response.ok) throw new Error(`CARTO style fetch returned ${response.status}`);
   const style = (await response.json()) as Style;
   for (const layer of style.layers) {
-    const override = DARK_MATTER_OVERRIDES[layer.id];
+    const override = config.overrides[layer.id];
     if (override && layer.paint) Object.assign(layer.paint, override);
   }
-  style.layers.push(CAPITAL_CITY_LAYER);
+  style.layers.push({ ...CAPITAL_CITY_LAYER, paint: config.capitalPaint });
 
   // Painted last (on top of every other layer, including neighbouring
   // countries' place labels and roads) rather than filtering each of the
@@ -81,10 +124,46 @@ async function loadDarkMatterStyle(): Promise<Style> {
     id: "au-mask-fill",
     type: "fill",
     source: "au-mask",
-    paint: { "fill-color": WATER_COLOR, "fill-opacity": 1 },
+    paint: { "fill-color": config.waterColor, "fill-opacity": 1 },
   });
 
   return style;
+}
+
+// Each theme's style is fetched once and reused when the theme is switched
+// back. Callers get a copy because MapLibre takes ownership of what it is
+// given.
+const styleCache = new Map<ResolvedTheme, Promise<Style>>();
+
+async function loadStyle(theme: ResolvedTheme): Promise<Style> {
+  let cached = styleCache.get(theme);
+  if (!cached) {
+    cached = fetchStyle(theme);
+    styleCache.set(theme, cached);
+    cached.catch(() => styleCache.delete(theme));
+  }
+  return structuredClone(await cached);
+}
+
+type BasemapState =
+  | { kind: "gl"; layer: ReturnType<typeof L.maplibreGL>; theme: ResolvedTheme; removed: boolean }
+  | { kind: "raster"; layer: L.TileLayer; theme: ResolvedTheme; removed: boolean };
+
+function applyTheme(state: BasemapState, theme: ResolvedTheme): void {
+  if (state.theme === theme) return;
+  state.theme = theme;
+
+  if (state.kind === "raster") {
+    state.layer.setUrl(MAP_THEMES[theme].rasterUrl);
+    return;
+  }
+
+  loadStyle(theme)
+    .then((style) => {
+      if (state.removed || state.theme !== theme) return;
+      state.layer.getMaplibreMap().setStyle(style as never);
+    })
+    .catch((error) => console.error("Basemap style change failed:", error));
 }
 
 // A WebGL context can fail to create at all (blocklisted GPU driver, remote
@@ -94,30 +173,36 @@ async function loadDarkMatterStyle(): Promise<Style> {
 // Checking hasWebGL() up front avoids ever reaching that broken state.
 export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
   const map = useMap();
-  const layerRef = useRef<L.Layer | null>(null);
+  const theme = useResolvedTheme();
+  const stateRef = useRef<BasemapState | null>(null);
 
-  // Callers pass a fresh inline callback every render. Listing it as a
-  // dependency of the effect below would rebuild the whole basemap each time,
-  // so the effect reads the latest one through a ref instead.
+  // Callers pass a fresh inline callback every render, and the theme can change
+  // while the basemap is still loading. Listing either as a dependency of the
+  // effect below would rebuild the whole basemap, so it reads the latest of
+  // each through a ref instead.
   const onReadyRef = useRef(onReady);
+  const themeRef = useRef(theme);
   useEffect(() => {
     onReadyRef.current = onReady;
+    themeRef.current = theme;
   });
 
   useEffect(() => {
     let cancelled = false;
 
     function addRaster() {
-      const layer = L.tileLayer(CARTO_RASTER_URL, { attribution: CARTO_ATTRIBUTION, maxZoom: 19 });
+      const initialTheme = themeRef.current;
+      const layer = L.tileLayer(MAP_THEMES[initialTheme].rasterUrl, { attribution: CARTO_ATTRIBUTION, maxZoom: 19 });
       layer.once("load", () => onReadyRef.current?.());
       layer.addTo(map);
-      layerRef.current = layer;
+      stateRef.current = { kind: "raster", layer, theme: initialTheme, removed: false };
     }
 
     if (!hasWebGL()) {
       addRaster();
     } else {
-      loadDarkMatterStyle()
+      const initialTheme = themeRef.current;
+      loadStyle(initialTheme)
         .then((style) => {
           if (cancelled) return;
           // Attribution comes from the vector source's own TileJSON at
@@ -125,8 +210,10 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
           // maplibre source), not from an option passed in here.
           const layer = L.maplibreGL({ style: style as never });
           layer.addTo(map);
-          layerRef.current = layer;
+          const state: BasemapState = { kind: "gl", layer, theme: initialTheme, removed: false };
+          stateRef.current = state;
           layer.getMaplibreMap().once("load", () => onReadyRef.current?.());
+          applyTheme(state, themeRef.current);
         })
         .catch((error) => {
           console.error("Vector basemap failed to load, falling back to raster tiles:", error);
@@ -136,12 +223,18 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
 
     return () => {
       cancelled = true;
-      if (layerRef.current) {
-        map.removeLayer(layerRef.current);
-        layerRef.current = null;
+      const state = stateRef.current;
+      if (state) {
+        state.removed = true;
+        map.removeLayer(state.layer);
+        stateRef.current = null;
       }
     };
   }, [map]);
+
+  useEffect(() => {
+    if (stateRef.current) applyTheme(stateRef.current, theme);
+  }, [theme]);
 
   return null;
 }

@@ -31,6 +31,8 @@ export const CAPITAL_CITY_NAMES = ["Sydney", "Melbourne", "Brisbane", "Perth", "
 
 export const CARTO_DARK_MATTER_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 export const CARTO_RASTER_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+export const CARTO_LIGHT_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+export const CARTO_LIGHT_RASTER_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 export const CARTO_ATTRIBUTION = "&copy; OpenStreetMap &copy; CARTO";
 
 // Repaints CARTO's dark-matter vector style onto AusWatch's own palette

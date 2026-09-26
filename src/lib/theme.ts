@@ -1,5 +1,7 @@
 export type ThemePreference = "auto" | "light" | "dark";
 
+export type ResolvedTheme = "light" | "dark";
+
 export const THEME_STORAGE_KEY = "auswatch-theme";
 export const THEME_ORDER: readonly ThemePreference[] = ["auto", "light", "dark"];
 
@@ -9,6 +11,13 @@ export function isThemePreference(value: unknown): value is ThemePreference {
 
 export function nextThemePreference(current: ThemePreference): ThemePreference {
   return THEME_ORDER[(THEME_ORDER.indexOf(current) + 1) % THEME_ORDER.length];
+}
+
+// The theme actually on screen: an explicit data-theme wins, and its absence
+// (auto) defers to the OS preference.
+export function resolveTheme(dataTheme: string | null, prefersLight: boolean): ResolvedTheme {
+  if (dataTheme === "light" || dataTheme === "dark") return dataTheme;
+  return prefersLight ? "light" : "dark";
 }
 
 // "auto" is represented by the absence of data-theme so the stylesheet's

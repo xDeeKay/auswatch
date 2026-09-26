@@ -1,6 +1,6 @@
 .leaflet-container {
   isolation: isolate;
-  background: #232b34;
+  background: var(--color-map-land);
   font-family: var(--font-body), sans-serif;
 }
 
@@ -67,7 +67,7 @@
   height: 12px;
   border-radius: 9999px;
   background: var(--marker-color, var(--color-accent));
-  box-shadow: 0 0 0 4px rgba(233, 228, 216, 0.08);
+  box-shadow: 0 0 0 4px rgb(var(--color-foreground-rgb) / 0.08);
 }
 
 .auswatch-marker-dot.auswatch-marker-hollow {
