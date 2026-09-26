@@ -14,6 +14,7 @@ import {
   CARTO_RASTER_URL,
   DARK_MATTER_OVERRIDES,
   MIN_ZOOM,
+  SUBURB_LABEL_MIN_ZOOM,
   WATER_COLOR,
 } from "@/lib/map-constants";
 import { LIGHT_MAP_OVERRIDES, LIGHT_WATER_COLOR } from "@/lib/map-light-overrides";
@@ -105,6 +106,16 @@ function hasWebGL(): boolean {
   }
 }
 
+// Starts a label layer earlier by lowering its minzoom and extending its
+// size ramp back to that zoom at the size it already has at its first stop, so
+// the labels don't appear at an unset size.
+function startLabelsAt(layer: StyleLayer, minZoom: number): void {
+  layer.minzoom = minZoom;
+  const size = layer.layout?.["text-size"] as { stops?: [number, number][] } | undefined;
+  const first = size?.stops?.[0];
+  if (size?.stops && first && first[0] > minZoom) size.stops.unshift([minZoom, first[1]]);
+}
+
 async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
   const config = MAP_THEMES[theme];
   const response = await fetch(config.styleUrl);
@@ -113,6 +124,7 @@ async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
   for (const layer of style.layers) {
     const override = config.overrides[layer.id];
     if (override && layer.paint) Object.assign(layer.paint, override);
+    if (layer.id === "place_suburbs") startLabelsAt(layer, SUBURB_LABEL_MIN_ZOOM);
   }
   style.layers.push({ ...CAPITAL_CITY_LAYER, paint: config.capitalPaint });
 

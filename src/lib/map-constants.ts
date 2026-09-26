@@ -1,6 +1,11 @@
 export const MIN_ZOOM = 3;
 export const MAX_ZOOM = 18;
 
+// MapLibre zoom (one below Leaflet's) at which suburb labels start. CARTO's
+// tiles carry no suburb features below tile zoom 11, so going lower shows
+// nothing; its own style starts them at 12.
+export const SUBURB_LABEL_MIN_ZOOM = 11;
+
 // Leaflet's default (60) is tuned for a 100px wheel notch, but on Windows it
 // also divides each notch by 2 x devicePixelRatio, so a scaled display needs
 // dozens of notches to cross the full zoom range. Lower is faster.
