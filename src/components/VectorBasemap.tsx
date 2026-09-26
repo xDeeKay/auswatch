@@ -6,14 +6,13 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "@maplibre/maplibre-gl-leaflet";
 import { useMap } from "react-leaflet";
 import {
-  CAPITAL_CITY_NAMES,
+  CAPITAL_CITIES,
   CARTO_ATTRIBUTION,
   CARTO_DARK_MATTER_STYLE_URL,
   CARTO_LIGHT_RASTER_URL,
   CARTO_LIGHT_STYLE_URL,
   CARTO_RASTER_URL,
   DARK_MATTER_OVERRIDES,
-  MIN_ZOOM,
   SUBURB_LABEL_MIN_ZOOM,
   WATER_COLOR,
 } from "@/lib/map-constants";
@@ -35,31 +34,29 @@ type StyleLayer = {
 };
 type Style = { layers: StyleLayer[]; sources: Record<string, unknown> };
 
-// Shares its filter's name list with CAPITAL_CITY_NAMES rather than any of
-// CARTO's own rank-based place tiers - see the comment on that constant for
-// why rank isn't a safe proxy for "state/territory capital" here. Handing off
-// to place_city_r5/r6 at maxzoom 8 (their own minzoom) avoids drawing the
-// same city twice once the stock style's own tiers take over.
+// The city layers hand off to place_city_r5/r6 at maxzoom 8 (their own
+// minzoom), which avoids drawing the same city twice once the stock style's
+// own tiers take over.
+const CITY_LABEL_LAYOUT = {
+  "text-field": "{name_en}",
+  "symbol-sort-key": ["get", "priority"],
+  "text-font": ["Montserrat Medium", "Open Sans Bold", "Noto Sans Regular", "HanWangHeiLight Regular", "NanumBarunGothic Regular"],
+  "icon-image": "circle-11",
+  "icon-offset": [16, 5],
+  "text-anchor": "right",
+  "icon-size": 0.4,
+  "text-max-width": 8,
+  "text-keep-upright": true,
+  "text-offset": [0.2, 0.2],
+};
+
 const CAPITAL_CITY_LAYER: StyleLayer = {
   id: "au-capital-city-labels",
   type: "symbol",
-  source: "carto",
-  "source-layer": "place",
-  minzoom: MIN_ZOOM,
+  source: "au-capitals",
+  minzoom: 0,
   maxzoom: 8,
-  filter: ["all", ["==", "class", "city"], ["in", "name_en", ...CAPITAL_CITY_NAMES]],
-  layout: {
-    "text-field": "{name_en}",
-    "text-font": ["Montserrat Medium", "Open Sans Bold", "Noto Sans Regular", "HanWangHeiLight Regular", "NanumBarunGothic Regular"],
-    "text-size": 12,
-    "icon-image": "circle-11",
-    "icon-offset": [16, 5],
-    "text-anchor": "right",
-    "icon-size": 0.4,
-    "text-max-width": 8,
-    "text-keep-upright": true,
-    "text-offset": [0.2, 0.2],
-  },
+  layout: { ...CITY_LABEL_LAYOUT, "text-size": 12 },
 };
 
 type MapThemeConfig = {
@@ -106,6 +103,19 @@ function hasWebGL(): boolean {
   }
 }
 
+function cityPoints(
+  cities: readonly { name: string; lat: number; lng: number }[],
+): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  return {
+    type: "FeatureCollection",
+    features: cities.map((city, priority) => ({
+      type: "Feature",
+      properties: { name_en: city.name, priority },
+      geometry: { type: "Point", coordinates: [city.lng, city.lat] },
+    })),
+  };
+}
+
 // Starts a label layer earlier by lowering its minzoom and extending its
 // size ramp back to that zoom at the size it already has at its first stop, so
 // the labels don't appear at an unset size.
@@ -126,6 +136,7 @@ async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
     if (override && layer.paint) Object.assign(layer.paint, override);
     if (layer.id === "place_suburbs") startLabelsAt(layer, SUBURB_LABEL_MIN_ZOOM);
   }
+  style.sources["au-capitals"] = { type: "geojson", data: cityPoints(CAPITAL_CITIES) };
   style.layers.push({ ...CAPITAL_CITY_LAYER, paint: config.capitalPaint });
 
   // Painted last (on top of every other layer, including neighbouring

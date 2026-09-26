@@ -26,18 +26,22 @@ export const AUSTRALIA_MAX_BOUNDS: [[number, number], [number, number]] = [
   [-6, 162],
 ];
 
-// CARTO's place layer only promotes a handful of the world's highest-ranked
-// cities (rank <= 2, which for Australia is only Sydney and Melbourne) down
-// to the dataset's own minzoom floor. The next tier down (rank <= 4) does
-// cover the rest of the state/territory capitals, but it's a global rank
-// shared with places CARTO considers equally significant regardless of
-// whether they're a capital - Alice Springs, Newcastle and Townsville all
-// carry rank 4 too, as does Port Moresby just across the Torres Strait, close
-// enough to sit inside this app's Australia-only view. Rank isn't a reliable
-// proxy for "capital city" here, so the low-zoom capital labels are drawn by
-// a dedicated layer (see CAPITAL_CITY_LAYER in VectorBasemap.tsx) filtered by
-// an explicit name whitelist instead of overriding CARTO's own rank tiers.
-export const CAPITAL_CITY_NAMES = ["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Hobart", "Darwin", "Canberra"];
+// CARTO's tiles carry the state and territory capitals only from tile zoom 3
+// (below that, just Sydney), which is above the zoom a phone-width view of the
+// whole country sits at, and its rank-based place tiers also pull in
+// non-capitals such as Alice Springs and Port Moresby. So the capital labels
+// are drawn from this list instead of the tiles (see CAPITAL_CITY_LAYER in
+// VectorBasemap.tsx). Ordered by label priority when they collide at low zoom.
+export const CAPITAL_CITIES: readonly { name: string; lat: number; lng: number }[] = [
+  { name: "Sydney", lat: -33.8688, lng: 151.2093 },
+  { name: "Melbourne", lat: -37.8136, lng: 144.9631 },
+  { name: "Brisbane", lat: -27.4698, lng: 153.0251 },
+  { name: "Perth", lat: -31.9505, lng: 115.8605 },
+  { name: "Adelaide", lat: -34.9285, lng: 138.6007 },
+  { name: "Darwin", lat: -12.4634, lng: 130.8456 },
+  { name: "Hobart", lat: -42.8821, lng: 147.3272 },
+  { name: "Canberra", lat: -35.2809, lng: 149.13 },
+];
 
 export const CARTO_DARK_MATTER_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 export const CARTO_RASTER_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
