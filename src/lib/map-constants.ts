@@ -43,6 +43,55 @@ export const CAPITAL_CITIES: readonly { name: string; lat: number; lng: number }
   { name: "Canberra", lat: -35.2809, lng: 149.13 },
 ];
 
+// The largest cities below the capitals, drawn the same way and for the same
+// reason: CARTO's tiles only carry most of them from tile zoom 4 or 5, and its
+// ranks are not population (Griffith outranks Wollongong). Tier 1 is the
+// biggest and best spread, shown first; tier 2 fills in as the map zooms.
+// Within a tier, earlier entries win when labels collide.
+export const REGIONAL_CITIES: readonly { name: string; lat: number; lng: number; tier: 1 | 2 }[] = [
+  { name: "Gold Coast", lat: -28.0167, lng: 153.4, tier: 1 },
+  { name: "Newcastle", lat: -32.9283, lng: 151.7817, tier: 1 },
+  { name: "Townsville", lat: -19.259, lng: 146.8169, tier: 1 },
+  { name: "Cairns", lat: -16.9186, lng: 145.7781, tier: 1 },
+  { name: "Wollongong", lat: -34.4278, lng: 150.8931, tier: 1 },
+  { name: "Geelong", lat: -38.1499, lng: 144.3617, tier: 1 },
+  { name: "Sunshine Coast", lat: -26.65, lng: 153.0667, tier: 1 },
+  { name: "Toowoomba", lat: -27.5598, lng: 151.9507, tier: 1 },
+  { name: "Launceston", lat: -41.4332, lng: 147.1441, tier: 1 },
+  { name: "Alice Springs", lat: -23.698, lng: 133.8807, tier: 1 },
+  { name: "Mackay", lat: -21.1411, lng: 149.1861, tier: 1 },
+  { name: "Rockhampton", lat: -23.3781, lng: 150.5136, tier: 1 },
+  { name: "Ballarat", lat: -37.5622, lng: 143.8503, tier: 1 },
+  { name: "Bendigo", lat: -36.757, lng: 144.2794, tier: 1 },
+  { name: "Bunbury", lat: -33.3271, lng: 115.6414, tier: 1 },
+  { name: "Geraldton", lat: -28.7774, lng: 114.6149, tier: 2 },
+  { name: "Kalgoorlie", lat: -30.7489, lng: 121.4658, tier: 2 },
+  { name: "Albany", lat: -35.0269, lng: 117.8837, tier: 2 },
+  { name: "Broome", lat: -17.9614, lng: 122.2359, tier: 2 },
+  { name: "Karratha", lat: -20.7361, lng: 116.8463, tier: 2 },
+  { name: "Port Hedland", lat: -20.3106, lng: 118.6011, tier: 2 },
+  { name: "Katherine", lat: -14.4652, lng: 132.2635, tier: 2 },
+  { name: "Mount Isa", lat: -20.7256, lng: 139.4927, tier: 2 },
+  { name: "Bundaberg", lat: -24.8661, lng: 152.3489, tier: 2 },
+  { name: "Gladstone", lat: -23.8427, lng: 151.2555, tier: 2 },
+  { name: "Hervey Bay", lat: -25.2882, lng: 152.7683, tier: 2 },
+  { name: "Coffs Harbour", lat: -30.2963, lng: 153.1135, tier: 2 },
+  { name: "Port Macquarie", lat: -31.4333, lng: 152.9, tier: 2 },
+  { name: "Tamworth", lat: -31.0927, lng: 150.932, tier: 2 },
+  { name: "Lismore", lat: -28.8136, lng: 153.277, tier: 2 },
+  { name: "Orange", lat: -33.2839, lng: 149.1012, tier: 2 },
+  { name: "Dubbo", lat: -32.2569, lng: 148.6011, tier: 2 },
+  { name: "Wagga Wagga", lat: -35.1082, lng: 147.3598, tier: 2 },
+  { name: "Albury", lat: -36.0737, lng: 146.9135, tier: 2 },
+  { name: "Broken Hill", lat: -31.953, lng: 141.4537, tier: 2 },
+  { name: "Mildura", lat: -34.1855, lng: 142.1625, tier: 2 },
+  { name: "Shepparton", lat: -36.3805, lng: 145.399, tier: 2 },
+  { name: "Warrnambool", lat: -38.3818, lng: 142.488, tier: 2 },
+  { name: "Mount Gambier", lat: -37.8284, lng: 140.7807, tier: 2 },
+  { name: "Whyalla", lat: -33.0333, lng: 137.5833, tier: 2 },
+  { name: "Burnie", lat: -41.05, lng: 145.9, tier: 2 },
+];
+
 export const CARTO_DARK_MATTER_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 export const CARTO_RASTER_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 export const CARTO_LIGHT_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";

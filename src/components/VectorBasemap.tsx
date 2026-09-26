@@ -13,6 +13,7 @@ import {
   CARTO_LIGHT_STYLE_URL,
   CARTO_RASTER_URL,
   DARK_MATTER_OVERRIDES,
+  REGIONAL_CITIES,
   SUBURB_LABEL_MIN_ZOOM,
   WATER_COLOR,
 } from "@/lib/map-constants";
@@ -59,12 +60,28 @@ const CAPITAL_CITY_LAYER: StyleLayer = {
   layout: { ...CITY_LABEL_LAYOUT, "text-size": 12 },
 };
 
+// Tier 2 starts later so density grows with zoom rather than arriving at once.
+const REGIONAL_TIER_MIN_ZOOM = { 1: 3, 2: 4.5 } as const;
+
+function regionalCityLayer(tier: 1 | 2): StyleLayer {
+  return {
+    id: `au-regional-city-labels-${tier}`,
+    type: "symbol",
+    source: "au-regional-cities",
+    minzoom: REGIONAL_TIER_MIN_ZOOM[tier],
+    maxzoom: 8,
+    filter: ["==", ["get", "tier"], tier],
+    layout: { ...CITY_LABEL_LAYOUT, "text-size": 11 },
+  };
+}
+
 type MapThemeConfig = {
   styleUrl: string;
   rasterUrl: string;
   overrides: Record<string, Record<string, string | number>>;
   waterColor: string;
   capitalPaint: Record<string, string | number>;
+  regionalPaint: Record<string, string | number>;
 };
 
 const MAP_THEMES: Record<ResolvedTheme, MapThemeConfig> = {
@@ -79,6 +96,12 @@ const MAP_THEMES: Record<ResolvedTheme, MapThemeConfig> = {
       "text-halo-color": "#0a0d11",
       "text-halo-width": 1,
     },
+    regionalPaint: {
+      "text-color": "rgba(233, 228, 216, 0.68)",
+      "icon-color": "rgba(233, 228, 216, 0.5)",
+      "text-halo-color": "#0a0d11",
+      "text-halo-width": 1,
+    },
   },
   light: {
     styleUrl: CARTO_LIGHT_STYLE_URL,
@@ -88,6 +111,12 @@ const MAP_THEMES: Record<ResolvedTheme, MapThemeConfig> = {
     capitalPaint: {
       "text-color": "rgba(26, 33, 39, 0.9)",
       "icon-color": "rgba(143, 98, 18, 0.95)",
+      "text-halo-color": "#f4f1ea",
+      "text-halo-width": 1,
+    },
+    regionalPaint: {
+      "text-color": "rgba(26, 33, 39, 0.75)",
+      "icon-color": "rgba(26, 33, 39, 0.55)",
       "text-halo-color": "#f4f1ea",
       "text-halo-width": 1,
     },
@@ -104,13 +133,13 @@ function hasWebGL(): boolean {
 }
 
 function cityPoints(
-  cities: readonly { name: string; lat: number; lng: number }[],
+  cities: readonly { name: string; lat: number; lng: number; tier?: number }[],
 ): GeoJSON.FeatureCollection<GeoJSON.Point> {
   return {
     type: "FeatureCollection",
     features: cities.map((city, priority) => ({
       type: "Feature",
-      properties: { name_en: city.name, priority },
+      properties: { name_en: city.name, priority, tier: city.tier ?? 0 },
       geometry: { type: "Point", coordinates: [city.lng, city.lat] },
     })),
   };
@@ -149,8 +178,15 @@ async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
     if (layer.id === "place_suburbs") startLabelsAt(layer, SUBURB_LABEL_MIN_ZOOM);
     if (layer.id === "boundary_state") steadyStateBoundary(layer);
   }
+  // Layers higher in the stack are placed first when labels collide, so the
+  // order is tier 2, tier 1, then the capitals.
+  style.sources["au-regional-cities"] = { type: "geojson", data: cityPoints(REGIONAL_CITIES) };
   style.sources["au-capitals"] = { type: "geojson", data: cityPoints(CAPITAL_CITIES) };
-  style.layers.push({ ...CAPITAL_CITY_LAYER, paint: config.capitalPaint });
+  style.layers.push(
+    { ...regionalCityLayer(2), paint: config.regionalPaint },
+    { ...regionalCityLayer(1), paint: config.regionalPaint },
+    { ...CAPITAL_CITY_LAYER, paint: config.capitalPaint },
+  );
 
   // Painted last (on top of every other layer, including neighbouring
   // countries' place labels and roads) rather than filtering each of the
