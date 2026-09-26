@@ -36,6 +36,11 @@
   }
 }
 
+html,
+body {
+  overscroll-behavior: none;
+}
+
 body {
   background-color: rgb(var(--color-surface-rgb));
   color: rgb(var(--color-foreground-rgb));
