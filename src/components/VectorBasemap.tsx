@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { config as maplibreConfig } from "maplibre-gl";
 import "@maplibre/maplibre-gl-leaflet";
 import { useMap } from "react-leaflet";
 import { CAPITAL_CITY_NAMES, CARTO_ATTRIBUTION, CARTO_DARK_MATTER_STYLE_URL, CARTO_RASTER_URL, DARK_MATTER_OVERRIDES, MIN_ZOOM, WATER_COLOR } from "@/lib/map-constants";
@@ -54,16 +53,6 @@ const CAPITAL_CITY_LAYER: StyleLayer = {
     "text-halo-width": 1,
   },
 };
-
-// maplibre-gl locates its worker script via import.meta.url, which only
-// resolves to a real, fetchable location when the module loads as a native
-// ES module - once webpack bundles it into an app chunk, that URL points at
-// the chunk itself and the worker 404s silently, so no vector tiles ever
-// render (only non-source style layers like the flat background do). Serving
-// the worker as a static file (copied from node_modules by
-// scripts/copy-maplibre-worker.js on postinstall) and pointing config.WORKER_URL
-// at it directly bypasses that bundling problem.
-maplibreConfig.WORKER_URL = "/maplibre-gl-worker.mjs";
 
 function hasWebGL(): boolean {
   try {

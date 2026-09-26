@@ -9,5 +9,3 @@ build
 next-env.d.ts
 /src/generated
 *.tsbuildinfo
-/public/maplibre-gl-worker.mjs
-/public/maplibre-gl-shared.mjs

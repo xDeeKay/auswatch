@@ -5,7 +5,7 @@ import { FlatCompat } from "@eslint/eslintrc";
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 const config = [
-  { ignores: [".next/**", "node_modules/**", "src/generated/**", "public/maplibre-gl-*.mjs"] },
+  { ignores: [".next/**", "node_modules/**", "src/generated/**"] },
   ...compat.extends("next/core-web-vitals"),
 ];
 
