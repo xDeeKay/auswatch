@@ -5,7 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./map-theme.css";
 import { MapContainer, Marker } from "react-leaflet";
-import { AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM } from "@/lib/map-constants";
+import { AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
 import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 
@@ -44,6 +44,7 @@ export default function TicketLocationMapView({
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         zoomSnap={0.1}
+        wheelPxPerZoomLevel={WHEEL_PX_PER_ZOOM_LEVEL}
         preferCanvas
         className="h-full w-full"
       >

@@ -11,7 +11,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import { CameraStatus, CameraType } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
 import { TYPE_COLOR } from "@/lib/camera-labels";
-import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM } from "@/lib/map-constants";
+import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
@@ -94,6 +94,7 @@ export default function MapView({
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       zoomSnap={0.1}
+      wheelPxPerZoomLevel={WHEEL_PX_PER_ZOOM_LEVEL}
       preferCanvas
       zoomControl={false}
       className="h-full w-full"

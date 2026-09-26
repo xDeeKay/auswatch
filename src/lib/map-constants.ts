@@ -1,6 +1,11 @@
 export const MIN_ZOOM = 3;
 export const MAX_ZOOM = 18;
 
+// Leaflet's default (60) is tuned for a 100px wheel notch, but on Windows it
+// also divides each notch by 2 x devicePixelRatio, so a scaled display needs
+// dozens of notches to cross the full zoom range. Lower is faster.
+export const WHEEL_PX_PER_ZOOM_LEVEL = 25;
+
 // [south-west, north-east]. Mainland + Tasmania, no external territories -
 // the camera dataset doesn't extend to them and including Norfolk/Cocos/etc.
 // would just pull the fitted view away from where every marker actually is.

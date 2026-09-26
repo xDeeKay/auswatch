@@ -5,7 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./map-theme.css";
 import { MapContainer, Marker, ZoomControl, useMapEvents } from "react-leaflet";
-import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM } from "@/lib/map-constants";
+import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
@@ -62,6 +62,7 @@ export default function LocationPickerView({
           minZoom={MIN_ZOOM}
           maxZoom={MAX_ZOOM}
           zoomSnap={0.1}
+          wheelPxPerZoomLevel={WHEEL_PX_PER_ZOOM_LEVEL}
           preferCanvas
           zoomControl={false}
           className="h-full w-full"
