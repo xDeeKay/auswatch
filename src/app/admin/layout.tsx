@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <div className="flex h-screen h-dvh flex-col">
+    <div className="fixed inset-0 flex flex-col">
       <ModNav role={access.profile.role} userLabel={access.profile.email} />
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <main className="mx-auto flex w-full max-w-5xl flex-col gap-8">{children}</main>
