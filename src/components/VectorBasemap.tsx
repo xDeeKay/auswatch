@@ -157,6 +157,18 @@ function steadyStateBoundary(layer: StyleLayer): void {
   };
 }
 
+// CARTO draws state lines below water, roads and buildings, so a border that
+// follows a river or crosses a lake or road is buried. Moving the layer to just
+// before the first label puts it with the country outlines, above the map
+// features and still under the text.
+function moveBelowLabels(layers: StyleLayer[], layerId: string): void {
+  const from = layers.findIndex((layer) => layer.id === layerId);
+  if (from < 0) return;
+  const [layer] = layers.splice(from, 1);
+  const firstLabel = layers.findIndex((candidate) => candidate.type === "symbol");
+  layers.splice(firstLabel < 0 ? layers.length : firstLabel, 0, layer);
+}
+
 // Starts a label layer earlier by lowering its minzoom and extending its
 // size ramp back to that zoom at the size it already has at its first stop, so
 // the labels don't appear at an unset size.
@@ -178,6 +190,7 @@ async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
     if (layer.id === "place_suburbs") startLabelsAt(layer, SUBURB_LABEL_MIN_ZOOM);
     if (layer.id === "boundary_state") steadyStateBoundary(layer);
   }
+  moveBelowLabels(style.layers, "boundary_state");
   // Layers higher in the stack are placed first when labels collide, so the
   // order is tier 2, tier 1, then the capitals.
   style.sources["au-regional-cities"] = { type: "geojson", data: cityPoints(REGIONAL_CITIES) };
