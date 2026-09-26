@@ -190,10 +190,11 @@ describe("requireModerator / requireAdmin / getModeratorProfile", () => {
   });
 
   it("returns ok with the profile for an active moderator", async () => {
+    const activeProfile = profile();
     authMock.mockResolvedValue({ user: { id: "user-1" } });
-    findUniqueMock.mockResolvedValue(profile());
+    findUniqueMock.mockResolvedValue(activeProfile);
     const result = await requireModerator();
-    expect(result).toEqual({ status: "ok", profile: profile() });
+    expect(result).toEqual({ status: "ok", profile: activeProfile });
   });
 
   it("requireAdmin returns forbidden for an active non-admin moderator", async () => {
