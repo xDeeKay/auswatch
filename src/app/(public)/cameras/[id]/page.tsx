@@ -11,6 +11,7 @@ import {
   TYPE_LABEL,
 } from "@/lib/camera-labels";
 import { getSourceAttribution } from "@/lib/source-attribution";
+import { getStreetViewUrl } from "@/lib/street-view";
 import { SourceCredit } from "@/components/SourceCredit";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -116,6 +117,9 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
             <div className="mt-2 flex flex-col gap-2 border-t border-foreground/10 pt-4">
               <Button href={`/report/correction/${camera.id}`} size="sm">
                 Report an error
+              </Button>
+              <Button href={getStreetViewUrl(camera.lat, camera.lng)} tone="secondary" size="sm">
+                Open in Street View
               </Button>
               <Button href="/map" tone="secondary" size="sm">
                 Back to the map

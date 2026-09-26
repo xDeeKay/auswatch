@@ -7,6 +7,7 @@ import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 import type { FlyTarget } from "@/components/MapFlyTo";
 import { AuState, CameraStatus, CameraType, OperatorCategory } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
+import { getStreetViewUrl } from "@/lib/street-view";
 import {
   CAPTURE_LABEL,
   OPERATOR_CATEGORY_LABEL,
@@ -329,6 +330,9 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
             <div className="mt-auto flex flex-col gap-2">
               <Button href={`/cameras/${selectedCamera.id}`} size="sm">
                 View full record
+              </Button>
+              <Button href={getStreetViewUrl(selectedCamera.lat, selectedCamera.lng)} tone="secondary" size="sm">
+                Open in Street View
               </Button>
               <Button href={`/report/correction/${selectedCamera.id}`} tone="secondary" size="sm">
                 Suggest a correction

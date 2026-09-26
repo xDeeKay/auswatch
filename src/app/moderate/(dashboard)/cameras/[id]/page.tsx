@@ -28,6 +28,7 @@ import { overrideCameraState } from "@/lib/actions/camera-state";
 import { revertAuditLogEntry } from "@/lib/actions/audit-log";
 import { requireModerator, canView, canAct } from "@/lib/moderator-access";
 import { getSourceAttribution } from "@/lib/source-attribution";
+import { getStreetViewUrl } from "@/lib/street-view";
 import { AuState } from "@/generated/prisma/enums";
 import { STATE_LABEL } from "@/lib/au-state-labels";
 import { AUDIT_ACTION_LABEL } from "@/lib/audit-labels";
@@ -329,6 +330,11 @@ export default async function CameraDetailPage({
 
           <div className="h-60 overflow-hidden rounded border border-foreground/20">
             <TicketLocationMap lat={camera.lat} lng={camera.lng} sensitiveSites={sensitiveSiteMarkers} />
+          </div>
+          <div>
+            <Button href={getStreetViewUrl(camera.lat, camera.lng)} tone="secondary" size="xs">
+              Open in Street View
+            </Button>
           </div>
 
           {camera.sensitiveSiteMatches.length > 0 && (

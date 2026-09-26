@@ -38,6 +38,13 @@ export function Button(props: ButtonAsLink | ButtonAsButton) {
   const classes = cn(BASE_CLASS, TONE_CLASS[tone], SIZE_CLASS[size], className);
 
   if (props.href !== undefined) {
+    if (/^https?:\/\//.test(props.href)) {
+      return (
+        <a href={props.href} target="_blank" rel="noopener noreferrer" className={classes}>
+          {children}
+        </a>
+      );
+    }
     return (
       <Link href={props.href} className={classes}>
         {children}
