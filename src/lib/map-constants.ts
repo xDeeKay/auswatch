@@ -80,7 +80,7 @@ export const DARK_MATTER_OVERRIDES: Record<string, Record<string, string | numbe
   water_shadow: { "fill-color": WATER_COLOR, "fill-opacity": 1 },
   waterway: { "line-color": "#334353" },
   boundary_county: { "line-color": "#333f4a" },
-  boundary_state: { "line-color": "rgba(233, 228, 216, 0.2)" },
+  boundary_state: { "line-color": "rgba(233, 228, 216, 0.3)" },
   boundary_country_outline: { "line-color": "rgba(217, 164, 65, 0.4)" },
   boundary_country_inner: { "line-color": "rgba(233, 228, 216, 0.25)" },
   "aeroway-runway": { "line-color": "#3c4854" },

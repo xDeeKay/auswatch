@@ -116,6 +116,18 @@ function cityPoints(
   };
 }
 
+// CARTO sizes this line's dashes in multiples of its width, and the width is
+// 0.5px at low zoom, so the dashes are sub-pixel and drop out on 1x screens.
+// A fixed 1px width and pixel-sized dashes stay legible at every zoom.
+function steadyStateBoundary(layer: StyleLayer): void {
+  layer.minzoom = 0;
+  layer.paint = {
+    ...layer.paint,
+    "line-width": { stops: [[0, 1], [7, 1], [9, 1.2]] },
+    "line-dasharray": [4, 3],
+  };
+}
+
 // Starts a label layer earlier by lowering its minzoom and extending its
 // size ramp back to that zoom at the size it already has at its first stop, so
 // the labels don't appear at an unset size.
@@ -135,6 +147,7 @@ async function fetchStyle(theme: ResolvedTheme): Promise<Style> {
     const override = config.overrides[layer.id];
     if (override && layer.paint) Object.assign(layer.paint, override);
     if (layer.id === "place_suburbs") startLabelsAt(layer, SUBURB_LABEL_MIN_ZOOM);
+    if (layer.id === "boundary_state") steadyStateBoundary(layer);
   }
   style.sources["au-capitals"] = { type: "geojson", data: cityPoints(CAPITAL_CITIES) };
   style.layers.push({ ...CAPITAL_CITY_LAYER, paint: config.capitalPaint });
