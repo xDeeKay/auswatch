@@ -348,11 +348,25 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
 
   useEffect(() => {
     let cancelled = false;
+    let readyFired = false;
+    // "idle" (or "load" for the raster fallback) can in principle never fire -
+    // a stalled tile request, a source stuck retrying, a platform quirk. The
+    // loading overlay is opaque and blocks every input while it's up, so if
+    // its ready signal never comes the page is stuck for good, not just
+    // showing a stale map. This is the backstop: the overlay always comes
+    // down within READY_TIMEOUT_MS regardless of what the map itself is doing.
+    const READY_TIMEOUT_MS = 8000;
+    function markReady() {
+      if (readyFired) return;
+      readyFired = true;
+      onReadyRef.current?.();
+    }
+    const readyTimeout = setTimeout(markReady, READY_TIMEOUT_MS);
 
     function addRaster() {
       const initialKey = keyRef.current;
       const layer = L.tileLayer(rasterUrlFor(initialKey), { attribution: CARTO_ATTRIBUTION, maxZoom: 19 });
-      layer.once("load", () => onReadyRef.current?.());
+      layer.once("load", markReady);
       layer.addTo(map);
       const state: BasemapState = { kind: "raster", layer, key: initialKey, removed: false, credited: false };
       stateRef.current = state;
@@ -380,7 +394,7 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
           // landing in that window competes with that work on the main
           // thread and can stall for the rest of it - "idle" waits for
           // everything to settle before letting the overlay come down.
-          layer.getMaplibreMap().once("idle", () => onReadyRef.current?.());
+          layer.getMaplibreMap().once("idle", markReady);
           applyBasemapKey(map, state, keyRef.current);
         })
         .catch((error) => {
@@ -391,6 +405,7 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
 
     return () => {
       cancelled = true;
+      clearTimeout(readyTimeout);
       const state = stateRef.current;
       if (state) {
         state.removed = true;
