@@ -374,7 +374,13 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
           const state: BasemapState = { kind: "gl", layer, key: initialKey, removed: false, credited: false };
           stateRef.current = state;
           syncEsriCredit(map, state);
-          layer.getMaplibreMap().once("load", () => onReadyRef.current?.());
+          // "load" fires once the initially visible tiles are up, but the
+          // capital, regional and suburb label sources and the state border
+          // line keep loading and placing after that. A pinch or scroll
+          // landing in that window competes with that work on the main
+          // thread and can stall for the rest of it - "idle" waits for
+          // everything to settle before letting the overlay come down.
+          layer.getMaplibreMap().once("idle", () => onReadyRef.current?.());
           applyBasemapKey(map, state, keyRef.current);
         })
         .catch((error) => {
