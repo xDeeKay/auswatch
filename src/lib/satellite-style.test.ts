@@ -70,7 +70,7 @@ describe("applySatelliteStyle", () => {
     ]);
   });
 
-  it("keeps the state line whole, since its features mix Australian and foreign borders", () => {
+  it("does not region-test the state line, which is drawn from Australia-only borders", () => {
     const style = makeStyle();
     applySatelliteStyle(style, "u", REGION);
     expect(style.layers.find((l) => l.id === "boundary_state")?.filter).toBeUndefined();

@@ -18,9 +18,8 @@ export const IMAGERY_LAYER_ID = "esri-imagery-layer";
 // line. Australia has no land border, so the country lines are all foreign.
 const KEEP_VISIBLE = new Set(["boundary_state"]);
 
-// At country zoom CARTO packs every border in a tile into one feature, so a
-// test that a feature lies inside the region drops Australia's own lines along
-// with the foreign ones. The state line is therefore kept whole.
+// The state line is drawn from our own Australia-only borders, so it needs no
+// region test.
 const NOT_REGION_FILTERED = new Set(["boundary_state"]);
 
 const LIGHT_TEXT = /^rgba\(233, 228, 216, [\d.]+\)$/;

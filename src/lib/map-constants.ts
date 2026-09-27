@@ -100,6 +100,12 @@ export const CARTO_LIGHT_RASTER_URL = "https://{s}.basemaps.cartocdn.com/light_a
 // The key ships to the browser, so it must be restricted to our domains in the
 // Esri dashboard. Satellite view stays off when it is not set. Read at build
 // time (NEXT_PUBLIC_), so the Docker build has to be given it.
+// Borders between the states and territories, built by
+// scripts/build-au-state-borders.ts from the ABS boundaries.
+export const AU_STATE_BORDERS_URL = "/au-state-borders.geojson";
+export const AU_STATE_BORDERS_ATTRIBUTION =
+  '<a href="https://www.abs.gov.au" target="_blank" rel="noopener noreferrer">&copy; Australian Bureau of Statistics</a> (CC BY 4.0, modified)';
+
 export const ESRI_API_KEY = process.env.NEXT_PUBLIC_ARCGIS_API_KEY ?? "";
 export const SATELLITE_AVAILABLE = ESRI_API_KEY !== "";
 export const ESRI_IMAGERY_TILE_URL = `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${ESRI_API_KEY}`;

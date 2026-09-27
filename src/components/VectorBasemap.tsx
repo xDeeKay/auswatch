@@ -7,6 +7,8 @@ import { config as maplibreConfig } from "maplibre-gl";
 import "@maplibre/maplibre-gl-leaflet";
 import { useMap } from "react-leaflet";
 import {
+  AU_STATE_BORDERS_ATTRIBUTION,
+  AU_STATE_BORDERS_URL,
   CAPITAL_CITIES,
   CARTO_ATTRIBUTION,
   CARTO_DARK_MATTER_STYLE_URL,
@@ -201,6 +203,16 @@ function moveBelowLabels(layers: StyleLayer[], layerId: string): void {
   layers.splice(firstLabel < 0 ? layers.length : firstLabel, 0, layer);
 }
 
+// CARTO's state line packs Australian and foreign borders into one feature at
+// country zoom and leaves out the sea border at other zooms, so it cannot be
+// clipped to Australia or kept steady. The layer keeps CARTO's styling and
+// position but draws our own Australia-only borders instead.
+function drawOwnStateBorders(layer: StyleLayer): void {
+  layer.source = "au-state-borders";
+  delete layer["source-layer"];
+  delete layer.filter;
+}
+
 // Starts a label layer earlier by lowering its minzoom and extending its
 // size ramp back to that zoom at the size it already has at its first stop, so
 // the labels don't appear at an unset size.
@@ -220,8 +232,16 @@ async function fetchStyle(key: BasemapKey): Promise<Style> {
     const override = config.overrides[layer.id];
     if (override && layer.paint) Object.assign(layer.paint, override);
     if (layer.id === "place_suburbs") startLabelsAt(layer, SUBURB_LABEL_MIN_ZOOM);
-    if (layer.id === "boundary_state") steadyStateBoundary(layer);
+    if (layer.id === "boundary_state") {
+      steadyStateBoundary(layer);
+      drawOwnStateBorders(layer);
+    }
   }
+  style.sources["au-state-borders"] = {
+    type: "geojson",
+    data: AU_STATE_BORDERS_URL,
+    attribution: AU_STATE_BORDERS_ATTRIBUTION,
+  };
   moveBelowLabels(style.layers, "boundary_state");
   // Layers higher in the stack are placed first when labels collide, so the
   // order is tier 2, tier 1, then the capitals.
