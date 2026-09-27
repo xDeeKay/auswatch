@@ -7,7 +7,7 @@ import "./map-theme.css";
 import { MapContainer, Marker, ZoomControl, useMapEvents } from "react-leaflet";
 import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
-import { isIOS } from "@/lib/platform";
+import { isAndroid } from "@/lib/platform";
 import { BasemapToggle } from "@/components/BasemapToggle";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
@@ -53,13 +53,19 @@ export default function LocationPickerView({
   const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null);
   const [basemapReady, setBasemapReady] = useState(false);
 
-  // The maplibre-gl-leaflet plugin only binds its post-zoom resize/redraw
-  // handler when zoomAnimation is on (see its onAdd), and that handler does a
-  // full canvas resize, jumpTo and redraw after every zoom - pinch or button
-  // alike. On iOS Safari that cost compounds enough to freeze the page at
-  // higher zoom levels, needing a reload. Desktop and Android keep the
-  // animation; see src/lib/platform.ts for why the UA alone cannot detect iOS.
-  const skipZoomAnimation = isIOS();
+  // Leaflet's own TouchZoom handler refuses to start a new pinch while
+  // map._animatingZoom is true (see its _onTouchStart guard), and that flag is
+  // cleared either by a CSS transitionend or, as a WebKit workaround, a
+  // hardcoded 250ms setTimeout (Leaflet's Map.ZoomAnimation _animateZoom).
+  // Reported and reproduced on Android: main-thread work placing labels and
+  // the state border line after a zoom step can delay that timeout past its
+  // own 250ms, so a pinch attempted in that window is silently dropped until
+  // the map catches up. Disabling the animation skips this gate entirely.
+  // Scoped to Android only - iOS has its own unresolved freeze on this same
+  // vector map at high zoom, and disabling the animation there was tried and
+  // made it worse (a stuck, unrecoverable "Loading map" state), so iOS keeps
+  // the default for now.
+  const skipZoomAnimation = isAndroid();
 
   return (
     <div className="flex h-full w-full flex-col">
