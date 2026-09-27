@@ -13,6 +13,7 @@ import type { PublicCamera } from "@/lib/cameras";
 import { TYPE_COLOR } from "@/lib/camera-labels";
 import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
+import { isIOS } from "@/lib/platform";
 import { BasemapToggle } from "@/components/BasemapToggle";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
@@ -86,6 +87,14 @@ export default function MapView({
 }) {
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
 
+  // The maplibre-gl-leaflet plugin only binds its post-zoom resize/redraw
+  // handler when zoomAnimation is on (see its onAdd), and that handler does a
+  // full canvas resize, jumpTo and redraw after every zoom - pinch or button
+  // alike. On iOS Safari that cost compounds enough to freeze the page at
+  // higher zoom levels, needing a reload. Desktop and Android keep the
+  // animation; see src/lib/platform.ts for why the UA alone cannot detect iOS.
+  const skipZoomAnimation = isIOS();
+
   return (
     <MapContainer
       center={[-25.2744, 133.7751]}
@@ -95,6 +104,7 @@ export default function MapView({
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       zoomSnap={0.1}
+      zoomAnimation={!skipZoomAnimation}
       wheelPxPerZoomLevel={WHEEL_PX_PER_ZOOM_LEVEL}
       preferCanvas
       zoomControl={false}
