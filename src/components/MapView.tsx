@@ -77,12 +77,14 @@ export default function MapView({
   selectedId,
   onSelect,
   onBasemapReady,
+  onBasemapError,
   flyTarget,
 }: {
   cameras: PublicCamera[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onBasemapReady?: () => void;
+  onBasemapError?: (message: string) => void;
   flyTarget?: FlyTarget | null;
 }) {
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
@@ -118,7 +120,7 @@ export default function MapView({
     >
       <ZoomControl position="bottomleft" />
       <FitBounds bounds={AUSTRALIA_BOUNDS} options={FIT_PADDING} />
-      <VectorBasemap onReady={onBasemapReady} />
+      <VectorBasemap onReady={onBasemapReady} onError={onBasemapError} />
       <BasemapToggle />
       <MapFlyTo target={flyTarget ?? null} />
       <ClusterZoomSync clusterRef={clusterRef} />

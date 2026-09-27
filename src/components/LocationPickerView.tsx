@@ -52,6 +52,7 @@ export default function LocationPickerView({
 
   const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null);
   const [basemapReady, setBasemapReady] = useState(false);
+  const [basemapError, setBasemapError] = useState<string | null>(null);
 
   // Leaflet's own TouchZoom handler refuses to start a new pinch while
   // map._animatingZoom is true (see its _onTouchStart guard), and that flag is
@@ -86,7 +87,7 @@ export default function LocationPickerView({
         >
           <ZoomControl position="bottomleft" />
           {!value && <FitBounds bounds={AUSTRALIA_BOUNDS} options={FIT_PADDING} />}
-          <VectorBasemap onReady={() => setBasemapReady(true)} />
+          <VectorBasemap onReady={() => setBasemapReady(true)} onError={setBasemapError} />
           <BasemapToggle />
           <MapFlyTo target={flyTarget} />
           <ClickHandler onChange={onChange} />
@@ -106,7 +107,7 @@ export default function LocationPickerView({
           )}
         </MapContainer>
 
-        <MapLoadingOverlay ready={basemapReady} />
+        <MapLoadingOverlay ready={basemapReady} error={basemapError} />
 
         <div className="absolute left-3 top-3 z-[900]">
           <MapSearch onSelect={setFlyTarget} />

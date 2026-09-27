@@ -35,6 +35,7 @@ export default function TicketLocationMapView({
   sensitiveSites?: { lat: number; lng: number }[];
 }) {
   const [basemapReady, setBasemapReady] = useState(false);
+  const [basemapError, setBasemapError] = useState<string | null>(null);
 
   // Leaflet's own TouchZoom handler refuses to start a new pinch while
   // map._animatingZoom is true (see its _onTouchStart guard), and that flag is
@@ -65,14 +66,14 @@ export default function TicketLocationMapView({
         preferCanvas
         className="h-full w-full"
       >
-        <VectorBasemap onReady={() => setBasemapReady(true)} />
+        <VectorBasemap onReady={() => setBasemapReady(true)} onError={setBasemapError} />
         <BasemapToggle />
         {sensitiveSites?.map((site, i) => (
           <Marker key={i} position={[site.lat, site.lng]} icon={sensitiveSiteIcon} />
         ))}
         <Marker position={[lat, lng]} icon={markerIcon} />
       </MapContainer>
-      <MapLoadingOverlay ready={basemapReady} />
+      <MapLoadingOverlay ready={basemapReady} error={basemapError} />
     </div>
   );
 }

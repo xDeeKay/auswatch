@@ -328,7 +328,10 @@ function applyBasemapKey(map: L.Map, state: BasemapState, key: BasemapKey): void
 // partway through in that case, leaving the layer half-registered with the
 // map's resize/event system so every later invalidateSize() throws too.
 // Checking hasWebGL() up front avoids ever reaching that broken state.
-export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
+export function VectorBasemap({
+  onReady,
+  onError,
+}: { onReady?: () => void; onError?: (message: string) => void } = {}) {
   const map = useMap();
   const theme = useResolvedTheme();
   const view = useBasemapView();
@@ -340,9 +343,11 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
   // dependency of the effect below would rebuild the whole basemap, so it reads
   // the latest of each through a ref instead.
   const onReadyRef = useRef(onReady);
+  const onErrorRef = useRef(onError);
   const keyRef = useRef(key);
   useEffect(() => {
     onReadyRef.current = onReady;
+    onErrorRef.current = onError;
     keyRef.current = key;
   });
 
@@ -388,13 +393,28 @@ export function VectorBasemap({ onReady }: { onReady?: () => void } = {}) {
           const state: BasemapState = { kind: "gl", layer, key: initialKey, removed: false, credited: false };
           stateRef.current = state;
           syncEsriCredit(map, state);
-          // "load" fires once the initially visible tiles are up, but the
-          // capital, regional and suburb label sources and the state border
-          // line keep loading and placing after that. A pinch or scroll
-          // landing in that window competes with that work on the main
-          // thread and can stall for the rest of it - "idle" waits for
-          // everything to settle before letting the overlay come down.
-          layer.getMaplibreMap().once("idle", markReady);
+          // "idle" only needs a source that's part of the initial style to
+          // stall - a slow or dropped request on any one of them, well within
+          // normal mobile network variance - and, per an open MapLibre bug,
+          // "load" and "idle" both then never fire at all (they don't just
+          // fire late). "idle" also needs far more to succeed first: every
+          // source across the whole style, not just what's initially visible,
+          // so it is exposed to that bug far more often in practice. "load"
+          // is the smaller, more reliable bar this map ran on before.
+          const glMap = layer.getMaplibreMap();
+          glMap.once("load", markReady);
+          // Diagnostic only: a source failing before the map is ready is the
+          // one thing that can make "load"/"idle" never fire at all rather
+          // than just fire late (a documented upstream MapLibre bug), so it
+          // is otherwise invisible - the loading overlay just never comes
+          // down until the timeout above forces it, revealing a blank map
+          // with no indication why.
+          glMap.on("error", (event) => {
+            if (readyFired) return;
+            const sourceId = (event as { sourceId?: string }).sourceId;
+            const message = event.error?.message ?? String(event.error ?? "unknown error");
+            onErrorRef.current?.(sourceId ? `${sourceId}: ${message}` : message);
+          });
           applyBasemapKey(map, state, keyRef.current);
         })
         .catch((error) => {

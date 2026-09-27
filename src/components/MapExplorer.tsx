@@ -80,6 +80,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
   const [activeStates, setActiveStates] = useState<Set<AuState | null>>(new Set(STATE_ORDER));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [basemapReady, setBasemapReady] = useState(false);
+  const [basemapError, setBasemapError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null);
 
@@ -259,10 +260,11 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
           selectedId={selectedId}
           onSelect={setSelectedId}
           onBasemapReady={() => setBasemapReady(true)}
+          onBasemapError={setBasemapError}
           flyTarget={flyTarget}
         />
 
-        <MapLoadingOverlay ready={basemapReady} />
+        <MapLoadingOverlay ready={basemapReady} error={basemapError} />
 
         <div className="absolute left-3 top-3 z-[900]">
           <MapSearch onSelect={setFlyTarget} />
