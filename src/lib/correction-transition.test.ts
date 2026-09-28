@@ -15,7 +15,7 @@ import { buildCorrectionApproveTransition, buildCorrectionRejectTransition } fro
 import type { PendingCorrection } from "./correction-transition";
 import type { CameraSnapshot } from "./correction-diff";
 
-const camera: CameraSnapshot & { stateOverride: boolean } = {
+const camera: CameraSnapshot = {
   lat: -31.9505,
   lng: 115.8605,
   type: CameraType.alpr,
@@ -25,7 +25,6 @@ const camera: CameraSnapshot & { stateOverride: boolean } = {
   notes: "Mounted on a light pole.",
   state: AuState.wa,
   status: CameraStatus.active,
-  stateOverride: false,
 };
 
 const now = new Date("2026-09-01T00:00:00.000Z");
@@ -87,11 +86,10 @@ describe("buildCorrectionApproveTransition", () => {
       lat: -31.96,
       lng: 115.87,
       state: AuState.wa,
-      stateOverride: false,
     });
   });
 
-  it("does not touch state or stateOverride when location did not change", () => {
+  it("does not touch state when location did not change", () => {
     const plan = buildCorrectionApproveTransition(
       pendingCorrection({ proposedOperator: "NSW Police" }),
       camera,
@@ -99,10 +97,9 @@ describe("buildCorrectionApproveTransition", () => {
       now
     );
     expect(plan.cameraUpdate).not.toHaveProperty("state");
-    expect(plan.cameraUpdate).not.toHaveProperty("stateOverride");
   });
 
-  it("clears a prior manual state override when the location is corrected", () => {
+  it("re-derives state when the location is corrected", () => {
     const plan = buildCorrectionApproveTransition(
       pendingCorrection({ proposedLat: -33.8688, proposedLng: 151.2093 }),
       camera,
@@ -110,7 +107,6 @@ describe("buildCorrectionApproveTransition", () => {
       now
     );
     expect(plan.cameraUpdate.state).toBe(AuState.nsw);
-    expect(plan.cameraUpdate.stateOverride).toBe(false);
   });
 
   it("resolves state to null when the corrected location falls outside every state", () => {
@@ -326,19 +322,18 @@ describe("buildCorrectionApproveTransition", () => {
     expect(plan.historyEvent?.eventType).toBe(HistoryEventType.removed);
   });
 
-  it("audit entry before/after includes stateOverride when the location changed", () => {
+  it("audit entry before/after includes state when the location changed", () => {
     const plan = buildCorrectionApproveTransition(
       pendingCorrection({ proposedLat: -31.96, proposedLng: 115.87 }),
       camera,
       input,
       now
     );
-    expect(plan.auditLogEntry.before).toEqual({ lat: camera.lat, lng: camera.lng, state: camera.state, stateOverride: false });
+    expect(plan.auditLogEntry.before).toEqual({ lat: camera.lat, lng: camera.lng, state: camera.state });
     expect(plan.auditLogEntry.after).toEqual({
       lat: -31.96,
       lng: 115.87,
       state: AuState.wa,
-      stateOverride: false,
       correctionReportId: input.correctionId,
       createdSensitiveSiteMatchIds: [],
     });

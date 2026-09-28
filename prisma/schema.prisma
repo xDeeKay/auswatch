@@ -133,7 +133,6 @@ enum AuditActionType {
   camera_remove
   camera_correction_approve
   camera_correction_reject
-  camera_state_override
   camera_note_add
   moderator_create
   moderator_update
@@ -160,7 +159,6 @@ model Camera {
   reporterId           String // anonymized token only, never PII (IP, email, account)
   moderationState      ModerationState      @default(pending)
   state                AuState?
-  stateOverride        Boolean              @default(false)
   externalSource       ExternalImportSource?
   externalRef          String?
   createdAt            DateTime             @default(now())

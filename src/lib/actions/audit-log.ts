@@ -10,7 +10,6 @@ import { toJsonInput, pickCameraFields } from "@/lib/audit-log-payloads";
 import { diffGrants } from "@/lib/moderator-grants";
 import type {
   CameraLifecyclePayload,
-  CameraStateOverridePayload,
   CameraFieldsPayload,
   CorrectionStatusPayload,
   ModeratorProfilePayload,
@@ -111,23 +110,6 @@ async function restoreEntry(
           date: new Date(),
           eventType: HistoryEventType.corrected,
           note: "Reverted by an admin: moderation decision undone.",
-        },
-      });
-      return { ok: true };
-    }
-
-    case AuditActionType.camera_state_override: {
-      const before = entry.before as CameraStateOverridePayload;
-      await tx.camera.update({
-        where: { id: entry.entityId },
-        data: { state: before.state, stateOverride: before.stateOverride },
-      });
-      await tx.historyEvent.create({
-        data: {
-          cameraId: entry.entityId,
-          date: new Date(),
-          eventType: HistoryEventType.corrected,
-          note: "Reverted by an admin: state override undone.",
         },
       });
       return { ok: true };

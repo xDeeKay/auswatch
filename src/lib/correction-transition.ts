@@ -26,9 +26,6 @@ export type CorrectionDecisionInput = {
   moderationActionId: string;
 };
 
-/** The subset of Camera fields captured in an audit "before"/"after" snapshot, matching the keys `cameraUpdate` may set. */
-type CameraSnapshotForAudit = CameraSnapshot & { stateOverride: boolean };
-
 export type PendingCorrection = ProposedCameraFields & {
   proposedSensitiveSiteMatches: SensitiveSiteMatchResult[] | null;
   proposedSensitiveSiteCheckErrors: SensitiveSiteCheckError[] | null;
@@ -81,7 +78,7 @@ function describeChanges(camera: CameraSnapshot, correction: PendingCorrection):
  * never claims a field changed that this correction didn't touch.
  */
 function pickCameraAuditFields(
-  camera: CameraSnapshotForAudit,
+  camera: CameraSnapshot,
   cameraUpdate: Prisma.CameraUpdateInput
 ): { before: CameraFieldsPayload; after: CameraFieldsPayload } {
   const cameraRecord = camera as unknown as Record<string, unknown>;
@@ -97,7 +94,7 @@ function pickCameraAuditFields(
 
 export function buildCorrectionApproveTransition(
   correction: PendingCorrection,
-  camera: CameraSnapshotForAudit,
+  camera: CameraSnapshot,
   input: CorrectionDecisionInput,
   now: Date = new Date()
 ): CorrectionApproveTransitionPlan {
@@ -111,7 +108,6 @@ export function buildCorrectionApproveTransition(
   if (correction.proposedLng !== null) cameraUpdate.lng = correction.proposedLng;
   if (locationChanged) {
     cameraUpdate.state = derivedState;
-    cameraUpdate.stateOverride = false;
   }
   if (correction.proposedType !== null) cameraUpdate.type = correction.proposedType;
   if (correction.proposedOperator !== null) cameraUpdate.operator = correction.proposedOperator;

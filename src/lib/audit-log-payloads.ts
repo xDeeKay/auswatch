@@ -20,13 +20,10 @@ import type { GrantCell } from "@/lib/moderator-grants";
  */
 export type CameraLifecyclePayload = { moderationState: ModerationState; status: CameraStatus };
 
-export type CameraStateOverridePayload = { state: AuState | null; stateOverride: boolean };
-
 export type CameraFieldsPayload = Partial<{
   lat: number;
   lng: number;
   state: AuState | null;
-  stateOverride: boolean;
   type: CameraType;
   operator: string;
   operatorCategory: OperatorCategory;
@@ -38,7 +35,6 @@ const CAMERA_FIELDS_PAYLOAD_KEYS = [
   "lat",
   "lng",
   "state",
-  "stateOverride",
   "type",
   "operator",
   "operatorCategory",
@@ -76,7 +72,6 @@ export type ModeratorActivePayload = { isActive: boolean; deactivatedAt: string 
 export type AuditLogPayloadMap = {
   camera_verify: { before: CameraLifecyclePayload; after: CameraLifecyclePayload };
   camera_remove: { before: CameraLifecyclePayload; after: CameraLifecyclePayload };
-  camera_state_override: { before: CameraStateOverridePayload; after: CameraStateOverridePayload };
   camera_correction_approve: {
     before: CameraFieldsPayload;
     after: CameraFieldsPayload & { correctionReportId: string; createdSensitiveSiteMatchIds: string[] };
@@ -92,7 +87,6 @@ export type AuditLogPayloadMap = {
 export const AUDIT_ENTITY_BY_ACTION: Record<AuditActionType, AuditEntityType> = {
   camera_verify: "camera",
   camera_remove: "camera",
-  camera_state_override: "camera",
   camera_correction_approve: "camera",
   camera_correction_reject: "correction_report",
   camera_note_add: "camera_note",

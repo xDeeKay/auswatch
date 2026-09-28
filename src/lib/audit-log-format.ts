@@ -10,7 +10,6 @@ const FIELD_LABEL: Record<string, string> = {
   moderationState: "Moderation state",
   status: "Status",
   state: "State",
-  stateOverride: "Manually set",
   lat: "Latitude",
   lng: "Longitude",
   type: "Type",

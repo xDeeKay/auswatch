@@ -24,12 +24,10 @@ import { buildCorrectionDiffRows } from "@/lib/correction-diff";
 import { verifyCamera, removeCamera } from "@/lib/actions/moderation";
 import { approveCorrection, rejectCorrection } from "@/lib/actions/corrections";
 import { addCameraNote } from "@/lib/actions/camera-notes";
-import { overrideCameraState } from "@/lib/actions/camera-state";
 import { revertAuditLogEntry } from "@/lib/actions/audit-log";
 import { requireModerator, canView, canAct } from "@/lib/moderator-access";
 import { getSourceAttribution } from "@/lib/source-attribution";
 import { getStreetViewUrl } from "@/lib/street-view";
-import { AuState } from "@/generated/prisma/enums";
 import { STATE_LABEL } from "@/lib/au-state-labels";
 import { AUDIT_ACTION_LABEL } from "@/lib/audit-labels";
 import { formatAuditPayload } from "@/lib/audit-log-format";
@@ -295,9 +293,6 @@ export default async function CameraDetailPage({
                 </th>
                 <td className="py-1.5 text-foreground/85">
                   {camera.state ? STATE_LABEL[camera.state] : "Unresolved"}
-                  {camera.stateOverride && (
-                    <span className="ml-1 font-label text-xs text-foreground/50">(manually set)</span>
-                  )}
                 </td>
               </tr>
               <tr className="border-t border-foreground/10">
@@ -500,34 +495,6 @@ export default async function CameraDetailPage({
               </section>
             )}
 
-            {canActOnCamera && (
-              <section className="flex flex-col gap-2 rounded border border-foreground/10 p-4">
-                <h2 className="font-label text-xs text-amber">CORRECT STATE</h2>
-                <p className="text-xs text-foreground/50">
-                  Overrides the auto-derived state, for a border town or bad coordinates the
-                  automatic derivation got wrong.
-                </p>
-                <form
-                  action={async (formData: FormData) => {
-                    "use server";
-                    await overrideCameraState(camera.id, formData);
-                  }}
-                  className="flex flex-wrap items-center gap-2"
-                >
-                  <Select name="state" defaultValue={camera.state ?? ""} className="w-auto">
-                    <option value="">Unresolved</option>
-                    {Object.values(AuState)
-                      .sort((a, b) => STATE_LABEL[a].localeCompare(STATE_LABEL[b]))
-                      .map((state) => (
-                        <option key={state} value={state}>
-                          {STATE_LABEL[state]}
-                        </option>
-                      ))}
-                  </Select>
-                  <Button type="submit">Set state</Button>
-                </form>
-              </section>
-            )}
           </div>
         )}
 
