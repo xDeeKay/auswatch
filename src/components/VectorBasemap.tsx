@@ -354,6 +354,13 @@ export function VectorBasemap({
   useEffect(() => {
     let cancelled = false;
     let readyFired = false;
+    let contextLostFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    // Confirmed on a real device (2026-09-28): webglcontextrestored never
+    // fires here even minutes after a loss, preventDefault() notwithstanding
+    // - the browser has given up on this context for good. Waiting on a
+    // restore that also never comes just leaves the map blank forever, so
+    // this is a short grace period, not a real chance at recovery.
+    const CONTEXT_LOST_FALLBACK_MS = 3000;
     // "idle" (or "load" for the raster fallback) can in principle never fire -
     // a stalled tile request, a source stuck retrying, a platform quirk. The
     // loading overlay is opaque and blocks every input while it's up, so if
@@ -415,6 +422,47 @@ export function VectorBasemap({
             const message = event.error?.message ?? String(event.error ?? "unknown error");
             onErrorRef.current?.(sourceId ? `${sourceId}: ${message}` : message);
           });
+
+          // maplibre-gl-js has no webglcontextlost/webglcontextrestored
+          // handling anywhere in its own source (checked directly in
+          // node_modules, not just its docs) - if the context dies for any
+          // reason, the canvas goes blank forever with no event the library
+          // itself reacts to. preventDefault() is required by the WebGL spec
+          // for the browser to even attempt restoring the context, but on the
+          // device this was diagnosed against it never actually restores, so
+          // this falls back to the same raster tile layer used for browsers
+          // with no WebGL at all rather than leaving the map blank
+          // indefinitely on a restore that isn't coming.
+          const canvas = glMap.getCanvas();
+          canvas.addEventListener("webglcontextlost", (event) => {
+            event.preventDefault();
+            if (state.removed) return;
+            contextLostFallbackTimer = setTimeout(() => {
+              if (state.removed) return;
+              state.removed = true;
+              // Removing a maplibre-gl-leaflet layer tears down the
+              // underlying maplibre Map, which runs a long chain of WebGL
+              // buffer/texture cleanup against `context.gl` with no
+              // isContextLost() check anywhere in that path (confirmed
+              // directly in maplibre-gl's source). Against an already-dead
+              // context that cleanup can throw, and since this runs
+              // synchronously before addRaster() below, an uncaught throw
+              // here would silently skip the fallback entirely.
+              try {
+                map.removeLayer(state.layer);
+              } catch (error) {
+                console.error("Removing the dead WebGL layer threw:", error);
+              }
+              addRaster();
+            }, CONTEXT_LOST_FALLBACK_MS);
+          });
+          canvas.addEventListener("webglcontextrestored", () => {
+            if (contextLostFallbackTimer) {
+              clearTimeout(contextLostFallbackTimer);
+              contextLostFallbackTimer = null;
+            }
+          });
+
           applyBasemapKey(map, state, keyRef.current);
         })
         .catch((error) => {
@@ -426,11 +474,16 @@ export function VectorBasemap({
     return () => {
       cancelled = true;
       clearTimeout(readyTimeout);
+      if (contextLostFallbackTimer) clearTimeout(contextLostFallbackTimer);
       const state = stateRef.current;
       if (state) {
         state.removed = true;
         if (state.credited) map.attributionControl?.removeAttribution(ESRI_ATTRIBUTION);
-        map.removeLayer(state.layer);
+        try {
+          map.removeLayer(state.layer);
+        } catch (error) {
+          console.error("Removing the WebGL layer on unmount threw:", error);
+        }
         stateRef.current = null;
       }
     };

@@ -93,9 +93,16 @@ export const REGIONAL_CITIES: readonly { name: string; lat: number; lng: number;
 ];
 
 export const CARTO_DARK_MATTER_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-export const CARTO_RASTER_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 export const CARTO_LIGHT_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-export const CARTO_LIGHT_RASTER_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
+// The vector style above is a separate, still-free CARTO product (served from
+// tiles.basemaps.cartocdn.com, not this one) and needs no key. This raster
+// endpoint started requiring one in August 2026; without it, every tile is a
+// placeholder reading "API KEY REQUIRED" rather than real map data, for every
+// requester, key or no key doesn't depend on being a browser vs a script.
+export const CARTO_API_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY ?? "";
+export const CARTO_RASTER_URL = `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`;
+export const CARTO_LIGHT_RASTER_URL = `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`;
 
 // The key ships to the browser, so it must be restricted to our domains in the
 // Esri dashboard. Satellite view stays off when it is not set. Read at build
