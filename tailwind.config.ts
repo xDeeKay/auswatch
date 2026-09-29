@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 // Tailwind accepts a function here for opacity-aware CSS-variable colors at
 // runtime, even though its own Config type only declares plain strings.
@@ -27,6 +28,10 @@ const config: Config = {
         },
         error: "#C1443D",
       },
+      spacing: {
+        "watch-inset": "var(--watch-inset)",
+        "watch-control-inset": "var(--watch-control-inset)",
+      },
       fontFamily: {
         heading: ["var(--font-heading)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
@@ -34,7 +39,11 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(({ addVariant }) => {
+      addVariant("watch", "[data-watch] &");
+    }),
+  ],
 };
 
 export default config;

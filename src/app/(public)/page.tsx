@@ -24,7 +24,7 @@ export default async function LandingPage() {
 
   return (
     <main className="flex flex-col">
-      <section className="border-b border-foreground/10 px-6 py-6">
+      <section className="border-b border-foreground/10 px-6 py-6 watch:px-watch-inset">
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
           <p className="font-label text-xs text-amber">VOLUNTEER-RUN &middot; MODERATED &middot; OPEN LICENSE</p>
           <h1 className="max-w-2xl font-heading text-3xl leading-tight text-foreground sm:text-4xl">
@@ -49,7 +49,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="border-b border-foreground/10 px-6 py-6">
+      <section className="border-b border-foreground/10 px-6 py-6 watch:px-watch-inset">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 text-center min-[480px]:grid-cols-3">
           {stats.map((stat) => (
             <div key={stat.label}>
@@ -60,7 +60,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="px-6 py-6">
+      <section className="px-6 py-6 watch:px-watch-inset">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-3">
           <Card density="cozy" className="flex flex-col gap-4 border-foreground/10">
             <p className="font-label text-xs text-foreground/50">WHAT WE TRACK</p>

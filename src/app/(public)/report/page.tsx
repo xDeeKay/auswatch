@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ReportPage() {
   return (
-    <div className="px-6 py-6">
+    <div className="px-6 py-6 watch:px-watch-inset watch:pb-watch-inset">
       <main className="mx-auto flex max-w-5xl flex-col gap-8">
         <header>
           <h1 className="font-heading text-lg text-foreground">Submit a Camera</h1>

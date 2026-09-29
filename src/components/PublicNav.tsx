@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const linkClass = "whitespace-nowrap font-label text-sm text-foreground/70 transition hover:text-amber";
 const itemClass = "px-5 first:pl-0";
 const mobileLinkClass =
-  "block py-3 font-label text-sm text-foreground/70 transition hover:text-amber";
+  "block py-3 font-label text-sm text-foreground/70 transition hover:text-amber watch:py-4 watch:text-center watch:text-base";
 
 const NAV_LINKS = [
   { href: "/map", label: "Explore Map" },
@@ -17,8 +17,8 @@ const NAV_LINKS = [
 
 export function PublicNav() {
   return (
-    <nav className="border-b border-foreground/10 px-6">
-      <div className="flex w-full items-center justify-between gap-6 py-3">
+    <nav className="border-b border-foreground/10 px-6 watch:px-watch-inset watch:pt-[8vmin]">
+      <div className="flex w-full items-center justify-between gap-6 py-3 watch:justify-center watch:gap-3">
         <Link href="/" className="flex shrink-0 items-center gap-2.5 font-heading text-lg text-foreground">
           <Logo />
           AusWatch

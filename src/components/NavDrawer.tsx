@@ -41,7 +41,7 @@ export function NavDrawer({ children }: { children: React.ReactNode }) {
             className="absolute inset-0 bg-surface/80"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 top-0 flex h-full w-72 max-w-[80%] flex-col border-l border-foreground/10 bg-surface px-6 py-6">
+          <div className="absolute right-0 top-0 flex h-full w-72 max-w-[80%] flex-col border-l border-foreground/10 bg-surface px-6 py-6 watch:w-full watch:max-w-full watch:border-l-0 watch:px-watch-inset watch:py-watch-inset">
             <div className="flex items-center justify-between">
               <span className="font-label text-xs text-foreground/50">MENU</span>
               <button

@@ -14,7 +14,7 @@ const linkClass =
 export default function AboutPage() {
   return (
     <>
-      <div className="px-6 py-6">
+      <div className="px-6 py-6 watch:px-watch-inset watch:pb-watch-inset">
         <main className="mx-auto flex max-w-5xl flex-col divide-y divide-foreground/10 [&>*+*]:mt-5 [&>*+*]:pt-5">
           <header>
             <h1 className="font-heading text-lg text-foreground">Why AusWatch exists</h1>

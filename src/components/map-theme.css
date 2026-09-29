@@ -128,3 +128,64 @@
   font-family: var(--font-body), sans-serif;
   font-size: 0.75rem;
 }
+
+/*
+ * On a round watch face a full-screen map frame's corners are clipped by the
+ * bezel, and a compact one (the location picker) is touched with a finger
+ * rather than a mouse, so every map frame gets the same edge-anchored,
+ * enlarged control layout: zoom moves to the vertical middle of the left
+ * edge (where a circle is widest), and the basemap toggle and attribution
+ * pull in from the bottom-right corner. This overrides the small-container
+ * shrink above, which assumes a mouse pointer and works against a watch,
+ * where the touch target needs to grow as the screen shrinks, not follow it.
+ */
+[data-watch] .auswatch-map-frame .leaflet-bottom.leaflet-left {
+  bottom: 50%;
+  left: var(--watch-control-inset);
+  transform: translateY(50%);
+}
+
+[data-watch] .auswatch-map-frame .leaflet-bottom.leaflet-right {
+  right: var(--watch-control-inset);
+  bottom: var(--watch-control-inset);
+  max-width: calc(100% - 2 * var(--watch-control-inset));
+}
+
+[data-watch] .auswatch-map-frame .leaflet-bar a,
+[data-watch] .auswatch-map-frame .leaflet-touch .leaflet-bar a {
+  width: 42px;
+  height: 42px;
+  line-height: 42px;
+}
+
+[data-watch] .auswatch-map-frame .leaflet-control-zoom-in,
+[data-watch] .auswatch-map-frame .leaflet-control-zoom-out,
+[data-watch] .auswatch-map-frame .leaflet-touch .leaflet-control-zoom-in,
+[data-watch] .auswatch-map-frame .leaflet-touch .leaflet-control-zoom-out {
+  font-size: 20px;
+}
+
+[data-watch] .auswatch-map-frame .leaflet-control-attribution {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+[data-watch] .auswatch-map-frame .auswatch-basemap-toggle button {
+  height: 36px;
+  padding: 0 0.9rem;
+  font-size: 0.8rem;
+}
+
+[data-watch] .auswatch-map-frame .auswatch-map-search {
+  width: 12rem;
+}
+
+[data-watch] .auswatch-map-frame .auswatch-map-search input {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+[data-watch] .auswatch-map-frame .auswatch-map-search li button {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.75rem;
+}

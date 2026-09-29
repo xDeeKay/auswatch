@@ -17,6 +17,8 @@
   --color-accent: #d9a441;
   --color-accent-rgb: 217 164 65;
   --color-map-backdrop: #232b34;
+  --watch-inset: 15vmin;
+  --watch-control-inset: 6vmin;
 }
 
 :root[data-theme="light"] {

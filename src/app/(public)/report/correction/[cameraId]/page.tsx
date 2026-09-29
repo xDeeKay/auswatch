@@ -16,7 +16,7 @@ export default async function CorrectionPage({
 
   if (!camera) {
     return (
-      <main className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-6 py-20 text-center">
+      <main className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-6 py-20 text-center watch:px-watch-inset">
         <h1 className="font-heading text-lg text-foreground">Camera not found</h1>
         <p className="text-sm text-foreground/70">
           This marker isn&apos;t currently on the verified public map.
@@ -26,7 +26,7 @@ export default async function CorrectionPage({
   }
 
   return (
-    <div className="px-6 py-6">
+    <div className="px-6 py-6 watch:px-watch-inset watch:pb-watch-inset">
       <main className="mx-auto flex max-w-5xl flex-col gap-8">
         <header>
           <h1 className="font-heading text-lg text-foreground">Suggest a correction</h1>

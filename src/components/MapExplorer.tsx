@@ -145,7 +145,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
   return (
     <div className="relative isolate flex h-full">
       <aside
-        className={`absolute inset-y-0 left-0 z-[1300] flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-foreground/10 bg-surface p-4 transition-transform duration-200 desktop:static desktop:translate-x-0 ${
+        className={`absolute inset-y-0 left-0 z-[1300] flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r border-foreground/10 bg-surface p-4 watch:w-full watch:border-r-0 watch:px-watch-inset watch:pb-watch-inset transition-transform duration-200 desktop:static desktop:translate-x-0 ${
           filtersOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -266,20 +266,20 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
 
         <MapLoadingOverlay ready={basemapReady} error={basemapError} />
 
-        <div className="absolute left-3 top-3 z-[900]">
+        <div className="absolute left-3 top-3 z-[900] watch:left-watch-control-inset">
           <MapSearch onSelect={setFlyTarget} />
         </div>
 
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
-          className="absolute right-3 top-3 z-[900] rounded border border-foreground/20 bg-surface/90 px-3 py-1.5 font-label text-xs text-foreground shadow desktop:hidden"
+          className="absolute right-3 top-3 z-[900] rounded border border-foreground/20 bg-surface/90 px-3 py-1.5 font-label text-xs text-foreground shadow watch:right-watch-control-inset watch:px-4 watch:py-2.5 watch:text-sm desktop:hidden"
         >
           Filters
         </button>
 
         {selectedCamera && (
-          <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-foreground/10 bg-surface p-5 desktop:inset-y-0 desktop:inset-x-auto desktop:right-0 desktop:w-80 desktop:bg-surface/95">
+          <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-foreground/10 bg-surface p-5 watch:px-watch-inset watch:pb-watch-inset desktop:inset-y-0 desktop:inset-x-auto desktop:right-0 desktop:w-80 desktop:bg-surface/95">
             <div className="flex items-start justify-between gap-2">
               <h2 className="font-heading text-base text-foreground">{TYPE_LABEL[selectedCamera.type]}</h2>
               <button

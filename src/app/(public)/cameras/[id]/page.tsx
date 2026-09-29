@@ -41,7 +41,7 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
   const attribution = getSourceAttribution(camera.externalSource);
 
   return (
-    <div className="px-6 py-6">
+    <div className="px-6 py-6 watch:px-watch-inset watch:pb-watch-inset">
       <main className="mx-auto flex max-w-5xl flex-col gap-8">
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">

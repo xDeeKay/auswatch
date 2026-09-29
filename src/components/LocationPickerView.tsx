@@ -109,7 +109,7 @@ export default function LocationPickerView({
 
         <MapLoadingOverlay ready={basemapReady} error={basemapError} />
 
-        <div className="absolute left-3 top-3 z-[900]">
+        <div className="absolute left-3 top-3 z-[900] watch:left-watch-control-inset">
           <MapSearch onSelect={setFlyTarget} />
         </div>
       </div>
