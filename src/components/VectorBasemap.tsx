@@ -305,7 +305,21 @@ function syncEsriCredit(map: L.Map, state: BasemapState): void {
   state.credited = wanted;
 }
 
-function applyBasemapKey(map: L.Map, state: BasemapState, key: BasemapKey): void {
+type WireGlLayer = (layer: ReturnType<typeof L.maplibreGL>, state: BasemapState) => void;
+
+// A basemap switch repaints every vector layer (visibility, filter and
+// paint all change), which is enough for MapLibre to reload the underlying
+// tile data on its own - but once the view is overzoomed past that source's
+// own maxzoom (14, against this map's 18), the render that reload settles
+// into can leave roads and buildings blank while labels (a different render
+// path) draw normally on top of them, and nothing short of a fresh WebGL
+// context reliably clears it (confirmed by reproducing the bug - zoom in
+// fully, switch to satellite, zoom in further, switch back - and by testing
+// several in-place nudges that only fixed it inconsistently). Replacing the
+// layer outright runs the same, already-correct code path a fresh page load
+// takes at that same zoom, at the cost of a brief flash and re-fetching
+// tiles the old layer already had.
+function applyBasemapKey(map: L.Map, state: BasemapState, key: BasemapKey, wireGlLayer: WireGlLayer): void {
   if (state.key === key) return;
   state.key = key;
   syncEsriCredit(map, state);
@@ -318,7 +332,27 @@ function applyBasemapKey(map: L.Map, state: BasemapState, key: BasemapKey): void
   loadStyle(key)
     .then((style) => {
       if (state.removed || state.key !== key) return;
-      state.layer.getMaplibreMap().setStyle(style as never);
+      const oldLayer = state.layer;
+      let newLayer: ReturnType<typeof L.maplibreGL>;
+      try {
+        newLayer = L.maplibreGL({ style: style as never });
+        newLayer.addTo(map);
+      } catch (error) {
+        console.error("Creating the replacement WebGL layer threw:", error);
+        return;
+      }
+      wireGlLayer(newLayer, state);
+      // The old layer's own context-loss listener checks state.layer against
+      // the layer it was wired to, so this has to be reassigned before
+      // removing the old layer below - removal itself calls
+      // WEBGL_lose_context as part of cleanup, which would otherwise read as
+      // a genuine loss on a layer that's already been superseded.
+      state.layer = newLayer;
+      try {
+        map.removeLayer(oldLayer);
+      } catch (error) {
+        console.error("Removing the previous WebGL layer threw:", error);
+      }
     })
     .catch((error) => console.error("Basemap style change failed:", error));
 }
@@ -345,6 +379,7 @@ export function VectorBasemap({
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
   const keyRef = useRef(key);
+  const wireGlLayerRef = useRef<WireGlLayer | null>(null);
   useEffect(() => {
     onReadyRef.current = onReady;
     onErrorRef.current = onError;
@@ -385,6 +420,79 @@ export function VectorBasemap({
       syncEsriCredit(map, state);
     }
 
+    // Wires load/error reporting and WebGL context-loss recovery onto a
+    // vector layer's canvas. Called for the layer created below and again,
+    // via wireGlLayerRef, for every replacement a basemap switch creates -
+    // both the canvas and its WebGL context are new each time.
+    const wireGlLayer: WireGlLayer = (layer, state) => {
+      // "idle" only needs a source that's part of the current style to stall
+      // - a slow or dropped request on any one of them, well within normal
+      // mobile network variance - and, per an open MapLibre bug, "load" and
+      // "idle" both then never fire at all (they don't just fire late).
+      // "idle" also needs far more to succeed first: every source across the
+      // whole style, not just what's initially visible, so it is exposed to
+      // that bug far more often in practice. "load" is the smaller, more
+      // reliable bar this map ran on before.
+      const glMap = layer.getMaplibreMap();
+      glMap.once("load", markReady);
+      // Diagnostic only: a source failing before the map is ready is the one
+      // thing that can make "load"/"idle" never fire at all rather than just
+      // fire late (a documented upstream MapLibre bug), so it is otherwise
+      // invisible - the loading overlay just never comes down until the
+      // timeout above forces it, revealing a blank map with no indication
+      // why.
+      glMap.on("error", (event) => {
+        if (readyFired) return;
+        const sourceId = (event as { sourceId?: string }).sourceId;
+        const message = event.error?.message ?? String(event.error ?? "unknown error");
+        onErrorRef.current?.(sourceId ? `${sourceId}: ${message}` : message);
+      });
+
+      // maplibre-gl-js has no webglcontextlost/webglcontextrestored handling
+      // anywhere in its own source (checked directly in node_modules, not
+      // just its docs) - if the context dies for any reason, the canvas goes
+      // blank forever with no event the library itself reacts to.
+      // preventDefault() is required by the WebGL spec for the browser to
+      // even attempt restoring the context, but on the device this was
+      // diagnosed against it never actually restores, so this falls back to
+      // the same raster tile layer used for browsers with no WebGL at all
+      // rather than leaving the map blank indefinitely on a restore that
+      // isn't coming.
+      const canvas = layer.getCanvas();
+      canvas.addEventListener("webglcontextlost", (event) => {
+        event.preventDefault();
+        // A basemap switch intentionally replaces the layer, and removing
+        // the old one fires this same event as part of its own cleanup (see
+        // applyBasemapKey) - a loss on a layer that's already been
+        // superseded isn't a real loss to recover from.
+        if (state.removed || state.layer !== layer) return;
+        contextLostFallbackTimer = setTimeout(() => {
+          if (state.removed || state.layer !== layer) return;
+          state.removed = true;
+          // Removing a maplibre-gl-leaflet layer tears down the underlying
+          // maplibre Map, which runs a long chain of WebGL buffer/texture
+          // cleanup against `context.gl` with no isContextLost() check
+          // anywhere in that path (confirmed directly in maplibre-gl's
+          // source). Against an already-dead context that cleanup can throw,
+          // and since this runs synchronously before addRaster() below, an
+          // uncaught throw here would silently skip the fallback entirely.
+          try {
+            map.removeLayer(state.layer);
+          } catch (error) {
+            console.error("Removing the dead WebGL layer threw:", error);
+          }
+          addRaster();
+        }, CONTEXT_LOST_FALLBACK_MS);
+      });
+      canvas.addEventListener("webglcontextrestored", () => {
+        if (contextLostFallbackTimer) {
+          clearTimeout(contextLostFallbackTimer);
+          contextLostFallbackTimer = null;
+        }
+      });
+    };
+    wireGlLayerRef.current = wireGlLayer;
+
     if (!hasWebGL()) {
       addRaster();
     } else {
@@ -400,70 +508,7 @@ export function VectorBasemap({
           const state: BasemapState = { kind: "gl", layer, key: initialKey, removed: false, credited: false };
           stateRef.current = state;
           syncEsriCredit(map, state);
-          // "idle" only needs a source that's part of the initial style to
-          // stall - a slow or dropped request on any one of them, well within
-          // normal mobile network variance - and, per an open MapLibre bug,
-          // "load" and "idle" both then never fire at all (they don't just
-          // fire late). "idle" also needs far more to succeed first: every
-          // source across the whole style, not just what's initially visible,
-          // so it is exposed to that bug far more often in practice. "load"
-          // is the smaller, more reliable bar this map ran on before.
-          const glMap = layer.getMaplibreMap();
-          glMap.once("load", markReady);
-          // Diagnostic only: a source failing before the map is ready is the
-          // one thing that can make "load"/"idle" never fire at all rather
-          // than just fire late (a documented upstream MapLibre bug), so it
-          // is otherwise invisible - the loading overlay just never comes
-          // down until the timeout above forces it, revealing a blank map
-          // with no indication why.
-          glMap.on("error", (event) => {
-            if (readyFired) return;
-            const sourceId = (event as { sourceId?: string }).sourceId;
-            const message = event.error?.message ?? String(event.error ?? "unknown error");
-            onErrorRef.current?.(sourceId ? `${sourceId}: ${message}` : message);
-          });
-
-          // maplibre-gl-js has no webglcontextlost/webglcontextrestored
-          // handling anywhere in its own source (checked directly in
-          // node_modules, not just its docs) - if the context dies for any
-          // reason, the canvas goes blank forever with no event the library
-          // itself reacts to. preventDefault() is required by the WebGL spec
-          // for the browser to even attempt restoring the context, but on the
-          // device this was diagnosed against it never actually restores, so
-          // this falls back to the same raster tile layer used for browsers
-          // with no WebGL at all rather than leaving the map blank
-          // indefinitely on a restore that isn't coming.
-          const canvas = glMap.getCanvas();
-          canvas.addEventListener("webglcontextlost", (event) => {
-            event.preventDefault();
-            if (state.removed) return;
-            contextLostFallbackTimer = setTimeout(() => {
-              if (state.removed) return;
-              state.removed = true;
-              // Removing a maplibre-gl-leaflet layer tears down the
-              // underlying maplibre Map, which runs a long chain of WebGL
-              // buffer/texture cleanup against `context.gl` with no
-              // isContextLost() check anywhere in that path (confirmed
-              // directly in maplibre-gl's source). Against an already-dead
-              // context that cleanup can throw, and since this runs
-              // synchronously before addRaster() below, an uncaught throw
-              // here would silently skip the fallback entirely.
-              try {
-                map.removeLayer(state.layer);
-              } catch (error) {
-                console.error("Removing the dead WebGL layer threw:", error);
-              }
-              addRaster();
-            }, CONTEXT_LOST_FALLBACK_MS);
-          });
-          canvas.addEventListener("webglcontextrestored", () => {
-            if (contextLostFallbackTimer) {
-              clearTimeout(contextLostFallbackTimer);
-              contextLostFallbackTimer = null;
-            }
-          });
-
-          applyBasemapKey(map, state, keyRef.current);
+          wireGlLayer(layer, state);
         })
         .catch((error) => {
           console.error("Vector basemap failed to load, falling back to raster tiles:", error);
@@ -490,7 +535,9 @@ export function VectorBasemap({
   }, [map]);
 
   useEffect(() => {
-    if (stateRef.current) applyBasemapKey(map, stateRef.current, key);
+    if (stateRef.current && wireGlLayerRef.current) {
+      applyBasemapKey(map, stateRef.current, key, wireGlLayerRef.current);
+    }
   }, [map, key]);
 
   return null;
