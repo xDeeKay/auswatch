@@ -89,7 +89,7 @@ export function PhotoPicker({
           accept={ACCEPT}
           multiple
           onChange={(e) => handleFiles(e.target.files)}
-          className="text-sm text-foreground/70 file:mr-3 file:rounded file:border file:border-foreground/20 file:bg-transparent file:px-3 file:py-1.5 file:font-label file:text-xs file:text-amber"
+          className="text-sm text-foreground/70 file:mr-3 file:rounded file:border file:border-foreground/20 file:bg-transparent file:px-3 file:py-1.5 file:font-label file:text-sm file:text-amber"
         />
       )}
 

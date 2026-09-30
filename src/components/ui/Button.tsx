@@ -11,13 +11,17 @@ const TONE_CLASS: Record<ButtonTone, string> = {
   secondary: "border-foreground/20 text-foreground/70 hover:border-amber hover:text-amber",
 };
 
+// All three sizes share the same height (h-control, matching the shared
+// field controls in Field.tsx) and text size, so a button always lines up
+// with an adjacent input; only the horizontal padding changes between them.
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  xs: "px-2 py-1 text-xs",
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-4 py-2 text-sm",
+  xs: "px-2 text-sm",
+  sm: "px-3 text-sm",
+  md: "px-4 text-sm",
 };
 
-const BASE_CLASS = "inline-block rounded border font-label transition disabled:cursor-not-allowed disabled:opacity-40";
+const BASE_CLASS =
+  "inline-flex h-control items-center justify-center rounded border font-label transition disabled:cursor-not-allowed disabled:opacity-40";
 
 type CommonProps = {
   tone?: ButtonTone;

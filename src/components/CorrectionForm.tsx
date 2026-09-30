@@ -7,10 +7,12 @@ import { CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/en
 import { TYPE_LABEL, TYPE_ORDER, CAPTURE_LABEL, CAPTURE_ORDER, OPERATOR_CATEGORY_LABEL, OPERATOR_NAME_PROMPT } from "@/lib/camera-labels";
 import type { CorrectableCamera } from "@/lib/cameras";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { Button } from "@/components/ui/Button";
 
 const fieldLabel = "font-label text-xs text-amber";
 const inputClass =
-  "w-full rounded border border-foreground/20 bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-foreground/30 focus:border-amber focus:outline-none";
+  "w-full rounded border border-foreground/20 bg-transparent px-3 py-1.5 text-sm text-foreground placeholder:text-foreground/30 focus:border-amber focus:outline-none";
+const singleLineClass = `${inputClass} h-control`;
 
 type SubmitState = "idle" | "submitting" | "done" | "error";
 
@@ -98,7 +100,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
           </label>
           <select
             id="type"
-            className={inputClass}
+            className={singleLineClass}
             value={type}
             onChange={(e) => setType(e.target.value as CameraType)}
             required
@@ -118,7 +120,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
           </label>
           <select
             id="captures"
-            className={inputClass}
+            className={singleLineClass}
             value={captures}
             onChange={(e) => setCaptures(e.target.value as CaptureType)}
             required
@@ -141,7 +143,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
         </label>
         <select
           id="operatorCategory"
-          className={inputClass}
+          className={singleLineClass}
           value={operatorCategory}
           onChange={(e) => setOperatorCategory(e.target.value as OperatorCategory)}
           required
@@ -164,7 +166,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
           </label>
           <input
             id="operator"
-            className={inputClass}
+            className={singleLineClass}
             value={operator}
             onChange={(e) => setOperator(e.target.value)}
             placeholder={namePrompt.placeholder}
@@ -235,13 +237,9 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="rounded border border-amber bg-amber/10 px-4 py-2 font-label text-sm text-amber transition hover:bg-amber/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
+      <Button type="submit" disabled={!canSubmit}>
         {state === "submitting" ? "Submitting…" : "Submit correction"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { signIn } from "@/auth";
+import { Button } from "@/components/ui/Button";
 
 export const metadata: Metadata = {
   title: "AusWatch - Sign in",
@@ -29,12 +30,7 @@ export default async function ModeratorSignInPage({
           await signIn("github", { redirectTo: "/moderate" });
         }}
       >
-        <button
-          type="submit"
-          className="rounded border border-amber bg-amber/10 px-4 py-2 font-label text-sm text-amber transition hover:bg-amber/20"
-        >
-          Sign in with GitHub
-        </button>
+        <Button type="submit">Sign in with GitHub</Button>
       </form>
     </main>
   );

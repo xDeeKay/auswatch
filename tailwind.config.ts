@@ -31,6 +31,7 @@ const config: Config = {
       spacing: {
         "watch-inset": "var(--watch-inset)",
         "watch-control-inset": "var(--watch-control-inset)",
+        control: "2.125rem",
       },
       fontFamily: {
         heading: ["var(--font-heading)", "sans-serif"],

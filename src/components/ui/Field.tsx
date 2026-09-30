@@ -4,13 +4,17 @@ import { cn } from "@/lib/cn";
 const CONTROL_CLASS =
   "w-full rounded border border-foreground/20 bg-transparent px-2 py-1.5 text-sm text-foreground focus:border-amber focus:outline-none";
 const PLACEHOLDER_CLASS = "placeholder:text-foreground/30";
+// Applied to every single-line control (not TextArea) so an <input> and a
+// <select> report the exact same box height regardless of each browser's own
+// native chrome around form elements, which padding alone doesn't guarantee.
+const SINGLE_LINE_CLASS = "h-control";
 
 export function Label({ children }: { children: ReactNode }) {
   return <label className="font-label text-xs text-amber">{children}</label>;
 }
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={cn(CONTROL_CLASS, className)} />;
+  return <select {...props} className={cn(CONTROL_CLASS, SINGLE_LINE_CLASS, className)} />;
 }
 
 export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -18,5 +22,5 @@ export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
 }
 
 export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={cn(CONTROL_CLASS, PLACEHOLDER_CLASS, className)} />;
+  return <input {...props} className={cn(CONTROL_CLASS, PLACEHOLDER_CLASS, SINGLE_LINE_CLASS, className)} />;
 }
