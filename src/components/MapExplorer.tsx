@@ -19,6 +19,7 @@ import {
   TYPE_ORDER,
 } from "@/lib/camera-labels";
 import { Button } from "@/components/ui/Button";
+import { CloseButton } from "@/components/ui/CloseButton";
 import { Label } from "@/components/ui/Field";
 
 const STATUS_ORDER: CameraStatus[] = [CameraStatus.active, CameraStatus.removed];
@@ -54,7 +55,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", {
 });
 
 function chipClass(active: boolean) {
-  return `flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-left font-label text-xs transition ${
+  return `flex h-control items-center justify-between gap-2 rounded border px-2 text-left font-label text-sm transition ${
     active
       ? "border-amber/50 bg-amber/10 text-foreground"
       : "border-foreground/15 text-foreground/40 hover:border-foreground/30 hover:text-foreground/70"
@@ -63,7 +64,7 @@ function chipClass(active: boolean) {
 
 /** Like chipClass, but the active state is tinted with the chip's own color instead of amber. */
 function accentChipProps(active: boolean, color: string): { className: string; style?: CSSProperties } {
-  const className = `flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-left font-label text-xs transition ${
+  const className = `flex h-control items-center justify-between gap-2 rounded border px-2 text-left font-label text-sm transition ${
     active
       ? "text-foreground"
       : "border-foreground/15 text-foreground/40 hover:border-foreground/30 hover:text-foreground/70"
@@ -150,18 +151,11 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
         }`}
       >
         <div className="flex items-center justify-between">
-          <span className="font-label text-xs text-amber">FILTERS</span>
-          <button
-            type="button"
-            onClick={() => setFiltersOpen(false)}
-            aria-label="Close"
-            className="font-label text-lg text-foreground/40 hover:text-foreground desktop:hidden"
-          >
-            &times;
-          </button>
+          <h2 className="font-heading text-sm text-foreground/50">Filters</h2>
+          <CloseButton onClick={() => setFiltersOpen(false)} label="Close filters" className="desktop:hidden" />
         </div>
 
-        <div className="-mt-2 flex flex-col gap-2 border-t border-foreground/10 pt-4">
+        <div className="flex flex-col gap-2">
           <Label>STATUS</Label>
           {STATUS_ORDER.map((status) => {
             const count = cameras.filter((c) => c.status === status).length;
@@ -245,14 +239,14 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
         </p>
       </aside>
 
-      {filtersOpen && (
-        <button
-          type="button"
-          aria-label="Close filters"
-          onClick={() => setFiltersOpen(false)}
-          className="absolute inset-0 z-[1200] border-0 bg-surface/70 p-0 desktop:hidden"
-        />
-      )}
+      <button
+        type="button"
+        aria-label="Close filters"
+        onClick={() => setFiltersOpen(false)}
+        className={`absolute inset-0 z-[1200] border-0 bg-surface/80 p-0 transition-opacity duration-200 desktop:hidden ${
+          filtersOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
 
       <div className="auswatch-map-frame flex-1">
         <MapView
@@ -266,17 +260,17 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
 
         <MapLoadingOverlay ready={basemapReady} error={basemapError} />
 
-        <div className="absolute left-3 top-3 z-[900] watch:left-watch-control-inset">
+        <div className="absolute left-3 top-3 z-[900] flex flex-col items-start gap-2 watch:left-watch-control-inset">
           <MapSearch onSelect={setFlyTarget} />
-        </div>
 
-        <button
-          type="button"
-          onClick={() => setFiltersOpen(true)}
-          className="absolute right-3 top-3 z-[900] rounded border border-foreground/20 bg-surface/90 px-3 py-1.5 font-label text-xs text-foreground shadow watch:right-watch-control-inset watch:px-4 watch:py-2.5 watch:text-sm desktop:hidden"
-        >
-          Filters
-        </button>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            className="flex h-control items-center justify-center rounded border border-foreground/20 bg-surface/90 px-2 font-label text-sm text-foreground shadow watch:h-auto watch:px-4 watch:py-2.5 watch:text-base desktop:hidden"
+          >
+            Filters
+          </button>
+        </div>
 
         {selectedCamera && (
           <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-foreground/10 bg-surface p-5 watch:px-watch-inset watch:pb-watch-inset desktop:inset-y-0 desktop:inset-x-auto desktop:right-0 desktop:w-80 desktop:bg-surface/95">
