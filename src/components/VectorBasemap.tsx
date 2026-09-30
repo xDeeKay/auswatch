@@ -319,6 +319,17 @@ type WireGlLayer = (layer: ReturnType<typeof L.maplibreGL>, state: BasemapState)
 // layer outright runs the same, already-correct code path a fresh page load
 // takes at that same zoom, at the cost of a brief flash and re-fetching
 // tiles the old layer already had.
+//
+// Keeping the old layer alive and hidden (visibility: hidden) until the new
+// one finished loading was tried, to swap the two in one frame instead of
+// flashing the incomplete new layer - it was reverted after testing on an
+// iPad: the new layer's canvas never repainted once revealed until the next
+// zoom/pan forced MapLibre to redraw, which reads as the map going blank
+// after a theme switch, a worse bug than the flash it was meant to fix.
+// `.leaflet-gl-layer` containers also have no CSS of their own establishing
+// them as positioned/stacking elements (confirmed - neither Leaflet's own
+// stylesheet nor the plugin's sets it), so two of them coexisting is
+// untested territory for this plugin, not just a visibility quirk.
 function applyBasemapKey(map: L.Map, state: BasemapState, key: BasemapKey, wireGlLayer: WireGlLayer): void {
   if (state.key === key) return;
   state.key = key;

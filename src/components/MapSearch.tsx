@@ -116,7 +116,7 @@ export function MapSearch({ onSelect }: { onSelect: (target: FlyTarget) => void 
         }}
         placeholder="Search a suburb, street or address"
         aria-label="Search the map"
-        className="bg-surface/90 shadow"
+        className="shadow"
       />
 
       {open && (loading || results.length > 0) && (
