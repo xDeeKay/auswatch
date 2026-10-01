@@ -2,6 +2,7 @@ import { getCameras } from "@/lib/cameras";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SiteFooter } from "@/components/SiteFooter";
+import { LandingMap } from "@/components/LandingMap";
 
 export const dynamic = "force-dynamic";
 
@@ -25,26 +26,31 @@ export default async function LandingPage() {
   return (
     <main className="flex flex-col">
       <section className="border-b border-foreground/10 px-6 py-6 watch:px-watch-inset">
-        <div className="mx-auto flex max-w-5xl flex-col gap-6">
-          <p className="font-label text-xs text-amber">VOLUNTEER-RUN &middot; MODERATED &middot; OPEN LICENSE</p>
-          <h1 className="max-w-2xl font-heading text-3xl leading-tight text-foreground sm:text-4xl">
-            A Public Record of Surveillance Infrastructure Across Australia
-          </h1>
-          <p className="max-w-xl text-sm font-semibold leading-relaxed text-foreground/85">
-            You can&rsquo;t opt out of a camera you don&rsquo;t know exists.
-          </p>
-          <p className="max-w-xl text-sm leading-relaxed text-foreground/70">
-            AusWatch records the cameras, plate readers, and recognition systems installed in
-            public spaces. We document the camera type, who operates it, what it appears to
-            capture, and whether it ever gets taken down. Every record is logged by a volunteer
-            and moderated before publication. Submissions are completely anonymous and
-            account-free; we never collect or store your personal information.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Button href="/map">Explore Map</Button>
-            <Button href="/report" tone="secondary">
-              Submit Camera
-            </Button>
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:gap-12">
+          <div className="flex flex-col items-center gap-6 text-center lg:flex-1 lg:items-start lg:text-left">
+            <h1 className="max-w-2xl font-heading text-3xl leading-tight text-foreground sm:text-4xl">
+              A Public Record of Surveillance Infrastructure Across Australia
+            </h1>
+            <p className="max-w-xl text-sm font-semibold leading-relaxed text-foreground/85">
+              You can&rsquo;t opt out of a camera you don&rsquo;t know exists.
+            </p>
+            <p className="max-w-xl text-sm leading-relaxed text-foreground/70">
+              AusWatch records the cameras, plate readers, and recognition systems installed in
+              public spaces. We document the camera type, who operates it, what it appears to
+              capture, and whether it ever gets taken down. Every record is logged by a volunteer
+              and moderated before publication. Submissions are completely anonymous and
+              account-free; we never collect or store your personal information.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
+              <Button href="/map">Explore Map</Button>
+              <Button href="/report" tone="secondary">
+                Submit Camera
+              </Button>
+            </div>
+          </div>
+
+          <div className="w-full watch:hidden lg:flex-1">
+            <LandingMap cameras={cameras} />
           </div>
         </div>
       </section>
