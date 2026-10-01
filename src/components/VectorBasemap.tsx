@@ -307,18 +307,21 @@ function syncEsriCredit(map: L.Map, state: BasemapState): void {
 
 type WireGlLayer = (layer: ReturnType<typeof L.maplibreGL>, state: BasemapState) => void;
 
-// A basemap switch repaints every vector layer (visibility, filter and
-// paint all change), which is enough for MapLibre to reload the underlying
-// tile data on its own - but once the view is overzoomed past that source's
-// own maxzoom (14, against this map's 18), the render that reload settles
-// into can leave roads and buildings blank while labels (a different render
-// path) draw normally on top of them, and nothing short of a fresh WebGL
-// context reliably clears it (confirmed by reproducing the bug - zoom in
-// fully, switch to satellite, zoom in further, switch back - and by testing
-// several in-place nudges that only fixed it inconsistently). Replacing the
-// layer outright runs the same, already-correct code path a fresh page load
-// takes at that same zoom, at the cost of a brief flash and re-fetching
-// tiles the old layer already had.
+// Switching into or out of satellite repaints every vector layer
+// (visibility, filter and paint all change), which is enough for MapLibre
+// to reload the underlying tile data on its own - but once the view is
+// overzoomed past that source's own maxzoom (14, against this map's 18),
+// the render that reload settles into can leave roads and buildings blank
+// while labels (a different render path) draw normally on top of them, and
+// nothing short of a fresh WebGL context reliably clears it (confirmed by
+// reproducing the bug - zoom in fully, switch to satellite, zoom in
+// further, switch back - and by testing several in-place nudges that only
+// fixed it inconsistently). Replacing the layer outright runs the same,
+// already-correct code path a fresh page load takes at that same zoom, at
+// the cost of a brief flash and re-fetching tiles the old layer already
+// had - a cost only worth paying for the transition actually shown to need
+// it. A light/dark theme change on its own never involves satellite, so it
+// stays on the plain in-place style patch below instead.
 //
 // Keeping the old layer alive and hidden (visibility: hidden) until the new
 // one finished loading was tried, to swap the two in one frame instead of
@@ -332,11 +335,27 @@ type WireGlLayer = (layer: ReturnType<typeof L.maplibreGL>, state: BasemapState)
 // untested territory for this plugin, not just a visibility quirk.
 function applyBasemapKey(map: L.Map, state: BasemapState, key: BasemapKey, wireGlLayer: WireGlLayer): void {
   if (state.key === key) return;
+  const previousKey = state.key;
   state.key = key;
   syncEsriCredit(map, state);
 
   if (state.kind === "raster") {
     state.layer.setUrl(rasterUrlFor(key));
+    return;
+  }
+
+  // The overzoomed-vector-tile bug above was only ever confirmed for a
+  // satellite<->vector switch, not a same-family light/dark change - that
+  // stays on the cheap, flash-free in-place style patch every basemap
+  // switch used before the fix above, rather than paying a full layer
+  // rebuild's cost (and its flash) for a transition never shown to need it.
+  if (previousKey !== "satellite" && key !== "satellite") {
+    loadStyle(key)
+      .then((style) => {
+        if (state.removed || state.key !== key || state.kind !== "gl") return;
+        state.layer.getMaplibreMap().setStyle(style as never);
+      })
+      .catch((error) => console.error("Basemap style change failed:", error));
     return;
   }
 
