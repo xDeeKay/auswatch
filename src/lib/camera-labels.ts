@@ -1,4 +1,5 @@
 import { AuState, CameraStatus, CameraType, CaptureType, HistoryEventType, OperatorCategory } from "@/generated/prisma/enums";
+import type { ResolvedTheme } from "@/lib/theme";
 
 export const STATUS_COLOR: Record<CameraStatus, string> = {
   [CameraStatus.active]: "#C1443D",
@@ -28,13 +29,42 @@ export const TYPE_ORDER: CameraType[] = [
   CameraType.other,
 ];
 
+// Protanopia and deuteranopia collapse hue to roughly a yellow/blue axis
+// plus lightness, so four colours spread across four hues still fold back
+// into "two blues" and "two warms" at a glance. These lean into that
+// instead of fighting it: two hue families, each split by a large,
+// deliberate lightness gap, so every pair reads as a clear light/dark step
+// rather than a near-miss shade. Sky Blue and Yellow are Okabe-Ito's
+// values; the dark blue and dark rust are custom, chosen for lightness
+// contrast against their light counterparts.
 export const TYPE_COLOR: Record<CameraType, string> = {
-  [CameraType.alpr]: "#E0923C",
-  [CameraType.facial]: "#D9536B",
-  [CameraType.cctv]: "#C9CDD1",
-  [CameraType.speed]: "#4C8FE0",
-  [CameraType.other]: "#8B96A0",
+  [CameraType.alpr]: "#F0E442", // yellow (Okabe-Ito)
+  [CameraType.facial]: "#7A3410", // dark rust
+  [CameraType.cctv]: "#56B4E9", // sky blue (Okabe-Ito)
+  [CameraType.speed]: "#0A4D80", // dark blue
+  [CameraType.other]: "#A3A9AD",
 };
+
+// Same two-family, lightness-split design as TYPE_COLOR, recalibrated for a
+// light background. The dark-theme palette's "light" member of each family
+// (Yellow, Sky Blue) is near-invisible against a pale surface, so both
+// families shift into a medium/dark range here instead of light/dark; the
+// gap between a family's two members shrinks as a result (there's less
+// usable lightness range before a colour either disappears into the
+// background or stops reading as "lighter"), but each family keeps the same
+// hue, so the pairwise hue separation that makes them distinguishable under
+// protanopia and deuteranopia carries over unchanged.
+export const LIGHT_TYPE_COLOR: Record<CameraType, string> = {
+  [CameraType.alpr]: "#B8551E", // medium clay
+  [CameraType.facial]: "#7A3410", // dark rust
+  [CameraType.cctv]: "#2F86C9", // medium azure
+  [CameraType.speed]: "#0A4D80", // dark blue
+  [CameraType.other]: "#ACA89F",
+};
+
+export function typeColorFor(theme: ResolvedTheme): Record<CameraType, string> {
+  return theme === "light" ? LIGHT_TYPE_COLOR : TYPE_COLOR;
+}
 
 export const OPERATOR_CATEGORY_LABEL: Record<OperatorCategory, string> = {
   [OperatorCategory.state_police]: "State/Territory Police",

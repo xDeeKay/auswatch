@@ -14,13 +14,14 @@ import {
   STATE_LABEL,
   STATUS_COLOR,
   STATUS_LABEL,
-  TYPE_COLOR,
   TYPE_LABEL,
   TYPE_ORDER,
+  typeColorFor,
 } from "@/lib/camera-labels";
 import { Button } from "@/components/ui/Button";
 import { CloseButton } from "@/components/ui/CloseButton";
 import { Label } from "@/components/ui/Field";
+import { useResolvedTheme } from "@/components/useResolvedTheme";
 
 const STATUS_ORDER: CameraStatus[] = [CameraStatus.active, CameraStatus.removed];
 
@@ -73,6 +74,7 @@ function accentChipProps(active: boolean, color: string): { className: string; s
 }
 
 export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
+  const typeColor = typeColorFor(useResolvedTheme());
   const [activeTypes, setActiveTypes] = useState<Set<CameraType>>(new Set(TYPE_ORDER));
   const [activeStatuses, setActiveStatuses] = useState<Set<CameraStatus>>(new Set(STATUS_ORDER));
   const [activeOperatorCategories, setActiveOperatorCategories] = useState<Set<OperatorCategory>>(
@@ -173,7 +175,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
           <Label>CAMERA TYPE</Label>
           {TYPE_ORDER.map((type) => {
             const count = cameras.filter((c) => c.type === type).length;
-            const { className, style } = accentChipProps(activeTypes.has(type), TYPE_COLOR[type]);
+            const { className, style } = accentChipProps(activeTypes.has(type), typeColor[type]);
             return (
               <button key={type} type="button" onClick={() => toggleType(type)} className={className} style={style}>
                 <span className="capitalize">{TYPE_LABEL[type]}</span>

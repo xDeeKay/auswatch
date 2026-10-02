@@ -10,13 +10,14 @@ import { MapContainer, Marker, ZoomControl, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { CameraStatus, CameraType } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
-import { TYPE_COLOR } from "@/lib/camera-labels";
+import { typeColorFor } from "@/lib/camera-labels";
 import { AUSTRALIA_BOUNDS, AUSTRALIA_MAX_BOUNDS, MIN_ZOOM, MAX_ZOOM, WHEEL_PX_PER_ZOOM_LEVEL } from "@/lib/map-constants";
 import { VectorBasemap } from "@/components/VectorBasemap";
 import { isAndroid } from "@/lib/platform";
 import { BasemapToggle } from "@/components/BasemapToggle";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
+import { useResolvedTheme } from "@/components/useResolvedTheme";
 
 const FIT_PADDING = { padding: [20, 20] as [number, number] };
 
@@ -26,8 +27,8 @@ const STATUS_SHAPE_CLASS: Record<CameraStatus, string> = {
   [CameraStatus.unconfirmed]: "auswatch-marker-dashed",
 };
 
-function markerIcon(camera: PublicCamera, selected: boolean) {
-  const color = TYPE_COLOR[camera.type as CameraType];
+function markerIcon(camera: PublicCamera, selected: boolean, typeColor: Record<CameraType, string>) {
+  const color = typeColor[camera.type as CameraType];
   const shapeClass = STATUS_SHAPE_CLASS[camera.status];
   return L.divIcon({
     className: "auswatch-marker",
@@ -88,6 +89,7 @@ export default function MapView({
   flyTarget?: FlyTarget | null;
 }) {
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
+  const typeColor = typeColorFor(useResolvedTheme());
 
   // Leaflet's own TouchZoom handler refuses to start a new pinch while
   // map._animatingZoom is true (see its _onTouchStart guard), and that flag is
@@ -129,7 +131,7 @@ export default function MapView({
           <Marker
             key={camera.id}
             position={[camera.lat, camera.lng]}
-            icon={markerIcon(camera, camera.id === selectedId)}
+            icon={markerIcon(camera, camera.id === selectedId, typeColor)}
             eventHandlers={{ click: () => onSelect(camera.id) }}
           />
         ))}
