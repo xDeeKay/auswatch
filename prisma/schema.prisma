@@ -32,7 +32,6 @@ enum CameraStatus {
 enum ModerationState {
   pending
   verified
-  disputed
   removed
 }
 

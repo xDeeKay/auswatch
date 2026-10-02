@@ -16,7 +16,6 @@ export const ACTION_TYPE_LABEL: Record<ModerationActionType, string> = {
 export const MODERATION_STATE_LABEL: Record<ModerationState, string> = {
   [ModerationState.pending]: "Pending review",
   [ModerationState.verified]: "Verified",
-  [ModerationState.disputed]: "Disputed",
   [ModerationState.removed]: "Removed",
 };
 
