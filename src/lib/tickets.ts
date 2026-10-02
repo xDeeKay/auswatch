@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ModerationState, CorrectionReportStatus, ModeratorRole } from "@/generated/prisma/enums";
-import type { AuState, CameraType } from "@/generated/prisma/enums";
+import type { AuState, CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/enums";
 import type {
   CameraModel,
   CorrectionReportModel,
@@ -12,7 +12,25 @@ import type { PageParams, PaginatedResult } from "@/lib/pagination";
 
 export type TicketKind = "submission" | "correction";
 
-export type TicketSort = "oldest" | "newest";
+export type TicketSortField = "kind" | "createdAt" | "cameraType" | "captures" | "operatorCategory" | "state";
+export type TicketSortDirection = "asc" | "desc";
+export type TicketSort = { field: TicketSortField; direction: TicketSortDirection };
+
+export const DEFAULT_TICKET_SORT: TicketSort = { field: "createdAt", direction: "asc" };
+
+// The SQL column each field sorts on. Pagination's LIMIT/OFFSET runs on the
+// raw union query before hydration, so a sortable field has to be selected
+// (and sorted) there, not on the richer objects hydrateTickets builds
+// afterward. Kept as an explicit allowlist, not a direct interpolation of
+// the field name, since it ultimately comes from a query string.
+const SORT_COLUMN: Record<TicketSortField, string> = {
+  kind: "kind",
+  createdAt: '"createdAt"',
+  cameraType: '"cameraType"',
+  captures: "captures",
+  operatorCategory: '"operatorCategory"',
+  state: "state",
+};
 
 export type SubmissionTicket = {
   kind: "submission";
@@ -41,9 +59,20 @@ export type TicketFilters = {
   state?: AuState;
   cameraType?: CameraType;
   kind?: TicketKind;
+  captures?: CaptureType;
+  operatorCategory?: OperatorCategory;
 };
 
-export type TicketRef = { id: string; kind: TicketKind; cameraId: string; createdAt: Date };
+export type TicketRef = {
+  id: string;
+  kind: TicketKind;
+  cameraId: string;
+  createdAt: Date;
+  cameraType: CameraType;
+  captures: CaptureType;
+  operatorCategory: OperatorCategory;
+  state: AuState | null;
+};
 
 /**
  * Mirrors moderator-access.ts's canView: an admin sees everything, a
@@ -74,6 +103,14 @@ function buildCameraFilterCondition(filters: TicketFilters, cameraAlias: string)
   if (filters.cameraType) {
     conditions.push(Prisma.sql`${Prisma.raw(cameraAlias)}."type" = ${filters.cameraType}::"CameraType"`);
   }
+  if (filters.captures) {
+    conditions.push(Prisma.sql`${Prisma.raw(cameraAlias)}."captures" = ${filters.captures}::"CaptureType"`);
+  }
+  if (filters.operatorCategory) {
+    conditions.push(
+      Prisma.sql`${Prisma.raw(cameraAlias)}."operatorCategory" = ${filters.operatorCategory}::"OperatorCategory"`
+    );
+  }
   if (conditions.length === 0) return Prisma.sql`TRUE`;
   return Prisma.join(conditions, " AND ");
 }
@@ -83,7 +120,8 @@ export function buildUnionSql(profile: ModeratorProfileWithGrants, filters: Tick
 
   if (filters.kind !== "correction") {
     branches.push(Prisma.sql`
-      SELECT c."id" AS id, 'submission' AS kind, c."id" AS "cameraId", c."createdAt" AS "createdAt"
+      SELECT c."id" AS id, 'submission' AS kind, c."id" AS "cameraId", c."createdAt" AS "createdAt",
+        c."type" AS "cameraType", c."captures" AS captures, c."operatorCategory" AS "operatorCategory", c."state" AS state
       FROM "Camera" c
       WHERE c."moderationState" = ${ModerationState.pending}::"ModerationState"
         AND ${buildCameraFilterCondition(filters, "c")}
@@ -93,7 +131,8 @@ export function buildUnionSql(profile: ModeratorProfileWithGrants, filters: Tick
 
   if (filters.kind !== "submission") {
     branches.push(Prisma.sql`
-      SELECT cr."id" AS id, 'correction' AS kind, cr."cameraId" AS "cameraId", cr."createdAt" AS "createdAt"
+      SELECT cr."id" AS id, 'correction' AS kind, cr."cameraId" AS "cameraId", cr."createdAt" AS "createdAt",
+        c."type" AS "cameraType", c."captures" AS captures, c."operatorCategory" AS "operatorCategory", c."state" AS state
       FROM "CorrectionReport" cr
       JOIN "Camera" c ON c."id" = cr."cameraId"
       WHERE cr."status" = ${CorrectionReportStatus.pending}::"CorrectionReportStatus"
@@ -109,10 +148,11 @@ export async function listTickets(
   profile: ModeratorProfileWithGrants,
   filters: TicketFilters,
   pageParams: PageParams,
-  sort: TicketSort = "oldest"
+  sort: TicketSort = DEFAULT_TICKET_SORT
 ): Promise<PaginatedResult<Ticket>> {
   const unionSql = buildUnionSql(profile, filters);
-  const direction = sort === "newest" ? Prisma.sql`DESC` : Prisma.sql`ASC`;
+  const column = Prisma.raw(SORT_COLUMN[sort.field]);
+  const direction = sort.direction === "desc" ? Prisma.sql`DESC` : Prisma.sql`ASC`;
 
   const countResult = await prisma.$queryRaw<{ count: number }[]>(
     Prisma.sql`SELECT COUNT(*)::int AS count FROM (${unionSql}) AS combined`
@@ -125,7 +165,7 @@ export async function listTickets(
   const refs = await prisma.$queryRaw<TicketRef[]>(
     Prisma.sql`
       SELECT * FROM (${unionSql}) AS combined
-      ORDER BY "createdAt" ${direction}, id ${direction}
+      ORDER BY ${column} ${direction}, "createdAt" ${direction}, id ${direction}
       LIMIT ${pageParams.pageSize} OFFSET ${offset}
     `
   );

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { AuState, CameraType, ModeratorRole } from "@/generated/prisma/enums";
+import { AuState, CameraType, CaptureType, ModeratorRole, OperatorCategory } from "@/generated/prisma/enums";
 import type { ModeratorProfileWithGrants } from "@/lib/moderator-access";
 import type { CameraModel, CorrectionReportModel } from "@/generated/prisma/models";
 import type { Prisma } from "@/generated/prisma/client";
@@ -118,8 +118,26 @@ describe("hydrateTickets", () => {
     correctionFindManyMock.mockResolvedValue([{ ...correction, camera: cameraB }]);
 
     const refs = [
-      { id: "cam-a", kind: "submission" as const, cameraId: "cam-a", createdAt: new Date(1) },
-      { id: "corr-1", kind: "correction" as const, cameraId: "cam-b", createdAt: new Date(2) },
+      {
+        id: "cam-a",
+        kind: "submission" as const,
+        cameraId: "cam-a",
+        createdAt: new Date(1),
+        cameraType: CameraType.speed,
+        captures: CaptureType.general,
+        operatorCategory: OperatorCategory.unknown,
+        state: AuState.wa,
+      },
+      {
+        id: "corr-1",
+        kind: "correction" as const,
+        cameraId: "cam-b",
+        createdAt: new Date(2),
+        cameraType: CameraType.alpr,
+        captures: CaptureType.plates,
+        operatorCategory: OperatorCategory.state_police,
+        state: AuState.nsw,
+      },
     ];
 
     const items = await hydrateTickets(refs);
@@ -133,7 +151,18 @@ describe("hydrateTickets", () => {
     cameraFindManyMock.mockResolvedValue([]);
     correctionFindManyMock.mockResolvedValue([]);
 
-    const refs = [{ id: "cam-gone", kind: "submission" as const, cameraId: "cam-gone", createdAt: new Date() }];
+    const refs = [
+      {
+        id: "cam-gone",
+        kind: "submission" as const,
+        cameraId: "cam-gone",
+        createdAt: new Date(),
+        cameraType: CameraType.cctv,
+        captures: CaptureType.unclear,
+        operatorCategory: OperatorCategory.unknown,
+        state: null,
+      },
+    ];
     const items = await hydrateTickets(refs);
 
     expect(items).toEqual([]);
@@ -188,13 +217,22 @@ describe("listTickets", () => {
     expect(refsQuery.sql).not.toContain("DESC");
   });
 
-  it("orders newest first when sort is 'newest'", async () => {
+  it("orders newest first when sorting createdAt descending", async () => {
     queryRawMock.mockResolvedValueOnce([{ count: 0 }]).mockResolvedValueOnce([]);
 
-    await listTickets(admin(), {}, { page: 1, pageSize: 20 }, "newest");
+    await listTickets(admin(), {}, { page: 1, pageSize: 20 }, { field: "createdAt", direction: "desc" });
 
     const refsQuery = queryRawMock.mock.calls[1]![0] as Prisma.Sql;
     expect(refsQuery.sql).toContain("DESC");
     expect(refsQuery.sql).not.toContain("ASC");
+  });
+
+  it("sorts on the requested column, not just createdAt", async () => {
+    queryRawMock.mockResolvedValueOnce([{ count: 0 }]).mockResolvedValueOnce([]);
+
+    await listTickets(admin(), {}, { page: 1, pageSize: 20 }, { field: "cameraType", direction: "asc" });
+
+    const refsQuery = queryRawMock.mock.calls[1]![0] as Prisma.Sql;
+    expect(refsQuery.sql).toContain('"cameraType" ASC');
   });
 });
