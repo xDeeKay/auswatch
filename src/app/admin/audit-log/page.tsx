@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Label, Select } from "@/components/ui/Field";
 import { DiffTable } from "@/components/ui/DiffTable";
+import { Pagination } from "@/components/ui/Pagination";
 
 export const metadata: Metadata = {
   title: "AusWatch - Audit log",
@@ -244,33 +245,11 @@ export default async function AuditLogPage({
         {result.items.length === 0 && <p className="text-sm text-foreground/50">No history yet.</p>}
       </div>
 
-      {result.totalPages > 1 && (
-        <div className="flex items-center justify-between font-label text-xs text-foreground/50">
-          {result.page > 1 ? (
-            <Link
-              href={`?${buildQueryString({ ...params, page: String(result.page - 1) })}`}
-              className="underline decoration-amber/50 underline-offset-2 hover:text-amber hover:decoration-amber"
-            >
-              &larr; Prev
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span>
-            Page {result.page} of {result.totalPages}
-          </span>
-          {result.page < result.totalPages ? (
-            <Link
-              href={`?${buildQueryString({ ...params, page: String(result.page + 1) })}`}
-              className="underline decoration-amber/50 underline-offset-2 hover:text-amber hover:decoration-amber"
-            >
-              Next &rarr;
-            </Link>
-          ) : (
-            <span />
-          )}
-        </div>
-      )}
+      <Pagination
+        page={result.page}
+        totalPages={result.totalPages}
+        hrefFor={(targetPage) => `?${buildQueryString({ ...params, page: String(targetPage) })}`}
+      />
     </>
   );
 }
