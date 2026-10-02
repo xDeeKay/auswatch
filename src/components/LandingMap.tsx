@@ -1,19 +1,16 @@
 import Link from "next/link";
-import { STATUS_COLOR } from "@/lib/camera-labels";
 import { buildAustraliaOutlinePaths, project, LANDING_MAP_WIDTH, LANDING_MAP_HEIGHT } from "@/lib/landing-map";
 import type { PublicCamera } from "@/lib/cameras";
-import { CameraStatus } from "@/generated/prisma/enums";
 
-const STATUS_ORDER: CameraStatus[] = [CameraStatus.active, CameraStatus.removed, CameraStatus.unconfirmed];
-
-// Opaque (the same panel color the real Leaflet map sits on, behind its
-// own tiles) rather than a translucent tint of the page background, so the
-// coastline reads as a distinct layer rather than blending into whatever
-// sits behind it.
+// The same land fill the real /map uses (see LAND_COLOR in map-constants.ts
+// and its light-theme equivalent), so the two stay visually consistent
+// rather than this map drifting from whatever `--color-map-backdrop`
+// (the Leaflet container's own backdrop, tuned separately per theme) ends
+// up being. The stroke is a neutral tint of the foreground rather than the
+// accent color, so the amber markers stay the only amber thing on the map.
 const OUTLINE_STYLE = {
-  fill: "var(--color-map-backdrop)",
-  stroke: "var(--color-accent)",
-  strokeOpacity: 0.5,
+  fill: "var(--color-map-land)",
+  stroke: "rgb(var(--color-foreground-rgb) / 0.3)",
   strokeWidth: 1.5,
   strokeLinejoin: "round" as const,
 };
@@ -29,12 +26,10 @@ export function LandingMap({ cameras }: { cameras: PublicCamera[] }) {
       aria-label={`Map of Australia marking ${cameras.length.toLocaleString("en-AU")} recorded camera locations`}
     >
       <defs>
-        {STATUS_ORDER.map((status) => (
-          <radialGradient key={status} id={`landing-map-glow-${status}`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={STATUS_COLOR[status]} stopOpacity="0.5" />
-            <stop offset="100%" stopColor={STATUS_COLOR[status]} stopOpacity="0" />
-          </radialGradient>
-        ))}
+        <radialGradient id="landing-map-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
       {/*
@@ -57,8 +52,8 @@ export function LandingMap({ cameras }: { cameras: PublicCamera[] }) {
             const [x, y] = project(camera.lng, camera.lat);
             return (
               <g key={camera.id}>
-                <circle cx={x} cy={y} r={10} fill={`url(#landing-map-glow-${camera.status})`} />
-                <circle cx={x} cy={y} r={3.5} fill={STATUS_COLOR[camera.status]} />
+                <circle cx={x} cy={y} r={10} fill="url(#landing-map-glow)" />
+                <circle cx={x} cy={y} r={3.5} fill="var(--color-accent)" />
               </g>
             );
           })}
