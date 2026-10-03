@@ -28,8 +28,8 @@ function SocialIconLink({ href, label, path }: { href: string; label: string; pa
 export function SiteFooter() {
   return (
     <>
-      <footer className="border-t border-foreground/10 px-6 py-6 watch:px-watch-inset">
-        <div className="mx-auto max-w-5xl">
+      <footer className="px-6 watch:px-watch-inset">
+        <div className="mx-auto max-w-5xl border-t border-foreground/10 py-6">
           <div className="grid grid-cols-1 gap-8 text-center min-[480px]:grid-cols-3">
             <div className="flex flex-col items-center gap-3">
               <p className="font-label text-xs text-foreground/50">INFO</p>
@@ -76,14 +76,16 @@ export function SiteFooter() {
           </div>
         </div>
       </footer>
-      <div className="flex flex-col items-center gap-4 border-t border-foreground/10 px-6 py-6 watch:px-watch-inset watch:pb-watch-inset">
-        <div className="flex items-center gap-5">
-          <SocialIconLink href="https://bsky.app/profile/auswatch.org" label="AusWatch on Bluesky" path={BLUESKY_PATH} />
-          <SocialIconLink href="https://github.com/xDeeKay/auswatch" label="AusWatch on GitHub" path={GITHUB_PATH} />
+      <div className="px-6 watch:px-watch-inset watch:pb-watch-inset">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-foreground/10 py-6">
+          <div className="flex items-center gap-5">
+            <SocialIconLink href="https://bsky.app/profile/auswatch.org" label="AusWatch on Bluesky" path={BLUESKY_PATH} />
+            <SocialIconLink href="https://github.com/xDeeKay/auswatch" label="AusWatch on GitHub" path={GITHUB_PATH} />
+          </div>
+          <p className="text-center font-label text-xs text-foreground/40">
+            &copy; 2026 AusWatch. All rights reserved.
+          </p>
         </div>
-        <p className="text-center font-label text-xs text-foreground/40">
-          &copy; 2026 AusWatch. All rights reserved.
-        </p>
       </div>
     </>
   );

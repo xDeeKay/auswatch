@@ -25,8 +25,8 @@ export default async function LandingPage() {
 
   return (
     <main className="flex flex-col">
-      <section className="border-b border-foreground/10 px-6 py-6 watch:px-watch-inset">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:gap-12">
+      <section className="px-6 pt-6 watch:px-watch-inset">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-10 border-b border-foreground/10 pb-6 lg:flex-row lg:items-start lg:gap-12">
           <div className="flex flex-col items-center gap-6 text-center lg:flex-1 lg:items-start lg:text-left">
             <h1 className="max-w-2xl font-heading text-3xl leading-tight text-foreground sm:text-4xl">
               A Public Record of Surveillance Infrastructure Across Australia
@@ -55,8 +55,8 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="border-b border-foreground/10 px-6 py-6 watch:px-watch-inset">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 text-center min-[480px]:grid-cols-3">
+      <section className="px-6 pt-6 watch:px-watch-inset">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 border-b border-foreground/10 pb-6 text-center min-[480px]:grid-cols-3">
           {stats.map((stat) => (
             <div key={stat.label}>
               <p className="font-label text-2xl text-foreground">{stat.value}</p>
