@@ -145,6 +145,12 @@
   background-color: rgb(var(--color-surface-rgb) / 0.92);
 }
 
+.auswatch-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .auswatch-marker-dot {
   display: block;
   box-sizing: border-box;
