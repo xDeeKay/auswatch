@@ -7,9 +7,7 @@ import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 import type { FlyTarget } from "@/components/MapFlyTo";
 import { AuState, CameraStatus, CameraType, OperatorCategory } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
-import { getStreetViewUrl } from "@/lib/street-view";
 import {
-  CAPTURE_LABEL,
   OPERATOR_CATEGORY_LABEL,
   STATE_LABEL,
   STATUS_COLOR,
@@ -18,7 +16,6 @@ import {
   TYPE_ORDER,
   typeColorFor,
 } from "@/lib/camera-labels";
-import { Button } from "@/components/ui/Button";
 import { CloseButton } from "@/components/ui/CloseButton";
 import { Label } from "@/components/ui/Field";
 import { useResolvedTheme } from "@/components/useResolvedTheme";
@@ -48,12 +45,6 @@ const STATE_ORDER: (AuState | null)[] = [
 function stateLabel(state: AuState | null): string {
   return state ? STATE_LABEL[state] : "Unresolved";
 }
-
-const dateFormatter = new Intl.DateTimeFormat("en-AU", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
 
 function chipClass(active: boolean) {
   return `flex h-control items-center justify-between gap-2 rounded border px-2 text-left font-label text-sm transition ${
@@ -106,8 +97,6 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
         camera.createdAt.getFullYear() >= sinceYear
     );
   }, [cameras, activeTypes, activeStatuses, activeOperatorCategories, activeStates, sinceYear]);
-
-  const selectedCamera = filteredCameras.find((camera) => camera.id === selectedId) ?? null;
 
   function toggleType(type: CameraType) {
     setActiveTypes((prev) => {
@@ -255,6 +244,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
           cameras={filteredCameras}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          onDeselect={() => setSelectedId(null)}
           onBasemapReady={() => setBasemapReady(true)}
           onBasemapError={setBasemapError}
           flyTarget={flyTarget}
@@ -274,70 +264,6 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
           </button>
         </div>
 
-        {selectedCamera && (
-          <div className="absolute inset-0 z-[1100] flex flex-col gap-4 overflow-y-auto border-l border-foreground/10 bg-surface p-5 watch:px-watch-inset watch:pb-watch-inset desktop:inset-y-0 desktop:inset-x-auto desktop:right-0 desktop:w-80 desktop:bg-surface/95">
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="font-heading text-base text-foreground">{TYPE_LABEL[selectedCamera.type]}</h2>
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                aria-label="Close"
-                className="font-label text-lg text-foreground/40 hover:text-foreground"
-              >
-                &times;
-              </button>
-            </div>
-
-            <dl className="flex flex-col gap-3 text-sm">
-              <div>
-                <dt className="font-label text-xs text-foreground/50">STATUS</dt>
-                <dd className="text-foreground/85">{STATUS_LABEL[selectedCamera.status]}</dd>
-              </div>
-              <div>
-                <dt className="font-label text-xs text-foreground/50">APPEARS TO CAPTURE</dt>
-                <dd className="text-foreground/85">{CAPTURE_LABEL[selectedCamera.captures]}</dd>
-              </div>
-              <div>
-                <dt className="font-label text-xs text-foreground/50">OPERATOR CATEGORY</dt>
-                <dd className="text-foreground/85">{OPERATOR_CATEGORY_LABEL[selectedCamera.operatorCategory]}</dd>
-              </div>
-              {selectedCamera.operator && (
-                <div>
-                  <dt className="font-label text-xs text-foreground/50">OWNER / OPERATOR</dt>
-                  <dd className="text-foreground/85">{selectedCamera.operator}</dd>
-                </div>
-              )}
-              <div>
-                <dt className="font-label text-xs text-foreground/50">STATE/TERRITORY</dt>
-                <dd className="text-foreground/85">
-                  {selectedCamera.state ? STATE_LABEL[selectedCamera.state] : "Unknown"}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-label text-xs text-foreground/50">COORDINATES</dt>
-                <dd className="font-label text-foreground/85">
-                  {selectedCamera.lat.toFixed(4)}, {selectedCamera.lng.toFixed(4)}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-label text-xs text-foreground/50">FIRST SIGHTED</dt>
-                <dd className="font-label text-foreground/85">{dateFormatter.format(selectedCamera.createdAt)}</dd>
-              </div>
-            </dl>
-
-            <div className="mt-auto flex flex-col gap-2">
-              <Button href={`/cameras/${selectedCamera.id}`} size="sm">
-                View full record
-              </Button>
-              <Button href={getStreetViewUrl(selectedCamera.lat, selectedCamera.lng)} tone="secondary" size="sm">
-                Open in Street View
-              </Button>
-              <Button href={`/report/correction/${selectedCamera.id}`} tone="secondary" size="sm">
-                Suggest a correction
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

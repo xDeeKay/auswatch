@@ -17,6 +17,7 @@ import { isAndroid } from "@/lib/platform";
 import { BasemapToggle } from "@/components/BasemapToggle";
 import { FitBounds } from "@/components/FitBounds";
 import { MapFlyTo, type FlyTarget } from "@/components/MapFlyTo";
+import { MapCameraCard } from "@/components/MapCameraCard";
 import { useResolvedTheme } from "@/components/useResolvedTheme";
 
 const FIT_PADDING = { padding: [20, 20] as [number, number] };
@@ -77,6 +78,7 @@ export default function MapView({
   cameras,
   selectedId,
   onSelect,
+  onDeselect,
   onBasemapReady,
   onBasemapError,
   flyTarget,
@@ -84,12 +86,14 @@ export default function MapView({
   cameras: PublicCamera[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDeselect: () => void;
   onBasemapReady?: () => void;
   onBasemapError?: (message: string) => void;
   flyTarget?: FlyTarget | null;
 }) {
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const typeColor = typeColorFor(useResolvedTheme());
+  const selectedCamera = cameras.find((camera) => camera.id === selectedId) ?? null;
 
   // Leaflet's own TouchZoom handler refuses to start a new pinch while
   // map._animatingZoom is true (see its _onTouchStart guard), and that flag is
@@ -136,6 +140,7 @@ export default function MapView({
           />
         ))}
       </MarkerClusterGroup>
+      {selectedCamera && <MapCameraCard camera={selectedCamera} onClose={onDeselect} />}
     </MapContainer>
   );
 }
