@@ -81,7 +81,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
 
   if (state === "done") {
     return (
-      <div className="mx-auto max-w-xl rounded border border-amber/30 bg-amber/5 p-6">
+      <div className="rounded border border-amber/30 bg-amber/5 p-6">
         <p className="font-heading text-lg text-foreground">Correction received</p>
         <p className="mt-2 text-sm text-foreground/70">
           Thank you. Your proposed correction is now in the review queue. It will not
@@ -92,7 +92,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto flex max-w-xl flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <label className={fieldLabel} htmlFor="type">
