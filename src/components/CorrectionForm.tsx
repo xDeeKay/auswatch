@@ -237,7 +237,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
         </p>
       )}
 
-      <Button type="submit" disabled={!canSubmit}>
+      <Button type="submit" disabled={!canSubmit} className="self-start">
         {state === "submitting" ? "Submitting…" : "Submit correction"}
       </Button>
     </form>

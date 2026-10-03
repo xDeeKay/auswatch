@@ -208,7 +208,7 @@ export default function SubmissionForm() {
         </p>
       )}
 
-      <Button type="submit" disabled={!canSubmit}>
+      <Button type="submit" disabled={!canSubmit} className="self-start">
         {state === "submitting" ? "Submitting…" : "Submit report"}
       </Button>
     </form>
