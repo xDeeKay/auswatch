@@ -67,7 +67,7 @@ export default function PrivacyPage() {
             <h2 className="font-heading text-base text-foreground">Data retention</h2>
             <p className="text-sm leading-relaxed text-foreground/70">
               Published camera records and their moderation history are kept indefinitely as part
-              of the public record &mdash; that history (including removals) is the point of
+              of the public record. That history (including removals) is the point of
               AusWatch.
             </p>
             <p className="text-sm leading-relaxed text-foreground/70">

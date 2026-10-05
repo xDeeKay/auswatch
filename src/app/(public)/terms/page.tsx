@@ -32,7 +32,7 @@ export default function TermsPage() {
               <li>3. Not include personal information about identifiable individuals in notes or operator fields.</li>
               <li>
                 4. Describe only what&rsquo;s publicly observable, not confirmed technical
-                capability &mdash; say what a camera appears to do, not what it definitely does.
+                capability: say what a camera appears to do, not what it definitely does.
               </li>
               <li>5. Accept that AusWatch may reject or remove any marker, without notice, that it determines falls outside this policy.</li>
             </ol>
@@ -89,7 +89,7 @@ export default function TermsPage() {
             </p>
             <p className="text-sm leading-relaxed text-foreground/70">
               It is not a route-avoidance or enforcement-evasion tool, does not run ads or sell
-              data, and does not confirm a camera&rsquo;s actual technical capability &mdash; only
+              data, and does not confirm a camera&rsquo;s actual technical capability, only
               what&rsquo;s visible about it.
             </p>
           </section>
