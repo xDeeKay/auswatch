@@ -186,7 +186,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           maxLength={2000}
-          placeholder="Describe what's visible from a public place. Avoid naming individuals or specific businesses."
+          placeholder="Describe what's visible from a public place. Avoid naming individuals."
         />
         {fieldErrors.notes && <p className="text-xs text-error">{fieldErrors.notes[0]}</p>}
       </div>

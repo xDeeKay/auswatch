@@ -189,7 +189,7 @@ export default function SubmissionForm() {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           maxLength={2000}
-          placeholder="Describe what's visible from a public place. Avoid naming individuals or specific businesses."
+          placeholder="Describe what's visible from a public place. Avoid naming individuals."
         />
       </div>
 
