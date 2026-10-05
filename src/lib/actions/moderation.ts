@@ -70,7 +70,7 @@ async function applyTransition(
       if (result.count === 0) {
         return "already-reviewed" as const;
       }
-      await tx.historyEvent.create({ data: plan.historyEvent });
+      if (plan.historyEvent) await tx.historyEvent.create({ data: plan.historyEvent });
       await tx.moderationAction.create({ data: plan.moderationAction });
       await tx.auditLogEntry.create({ data: plan.auditLogEntry });
       if (extraWrites) await extraWrites(tx, cameraId);

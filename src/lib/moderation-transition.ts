@@ -21,7 +21,8 @@ export type ModerationDecisionInput = {
 
 export type ModerationTransitionPlan = {
   cameraUpdate: { moderationState: ModerationState; status: CameraStatus };
-  historyEvent: { cameraId: string; date: Date; eventType: HistoryEventType; note: string };
+  /** Absent when the decision leaves the camera's lifecycle unchanged. */
+  historyEvent?: { cameraId: string; date: Date; eventType: HistoryEventType; note: string };
   moderationAction: {
     id: string;
     cameraId: string;
@@ -40,11 +41,11 @@ function buildTransition(
   auditAction: "camera_verify" | "camera_remove",
   moderationState: ModerationState,
   status: CameraStatus,
-  eventType: HistoryEventType
+  eventType: HistoryEventType | null
 ): ModerationTransitionPlan {
   return {
     cameraUpdate: { moderationState, status },
-    historyEvent: { cameraId: input.cameraId, date: now, eventType, note: input.note },
+    historyEvent: eventType ? { cameraId: input.cameraId, date: now, eventType, note: input.note } : undefined,
     moderationAction: {
       id: input.moderationActionId,
       cameraId: input.cameraId,
@@ -65,18 +66,25 @@ function buildTransition(
   };
 }
 
+/**
+ * A record already known to be removed (an import the source reports as
+ * decommissioned) stays removed when verified: verifying confirms the record,
+ * it doesn't claim the camera is back, and the original removal event keeps
+ * its real date on the timeline.
+ */
 export function buildVerifyTransition(
   input: ModerationDecisionInput,
   now: Date = new Date()
 ): ModerationTransitionPlan {
+  const staysRemoved = input.statusBefore === CameraStatus.removed;
   return buildTransition(
     input,
     now,
     ModerationActionType.verify,
     AuditActionType.camera_verify,
     ModerationState.verified,
-    CameraStatus.active,
-    HistoryEventType.active
+    staysRemoved ? CameraStatus.removed : CameraStatus.active,
+    staysRemoved ? null : HistoryEventType.active
   );
 }
 

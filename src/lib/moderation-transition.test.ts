@@ -19,6 +19,32 @@ const input = {
 
 const now = new Date("2026-08-30T09:00:00.000Z");
 
+describe("buildVerifyTransition for an already-removed camera", () => {
+  const plan = buildVerifyTransition({ ...input, statusBefore: CameraStatus.removed }, now);
+
+  it("verifies it but keeps the removed status", () => {
+    expect(plan.cameraUpdate).toEqual({
+      moderationState: ModerationState.verified,
+      status: CameraStatus.removed,
+    });
+  });
+
+  it("adds no history event, so the original removal date is untouched", () => {
+    expect(plan.historyEvent).toBeUndefined();
+  });
+
+  it("records the status as unchanged in the audit entry", () => {
+    expect(plan.auditLogEntry.before).toEqual({
+      moderationState: ModerationState.pending,
+      status: CameraStatus.removed,
+    });
+    expect(plan.auditLogEntry.after).toEqual({
+      moderationState: ModerationState.verified,
+      status: CameraStatus.removed,
+    });
+  });
+});
+
 describe("buildVerifyTransition", () => {
   const plan = buildVerifyTransition(input, now);
 
