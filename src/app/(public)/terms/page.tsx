@@ -28,7 +28,11 @@ export default function TermsPage() {
             <p className="text-sm leading-relaxed text-foreground/70">By submitting a camera or a correction, you agree to:</p>
             <ol className="flex flex-col gap-2 text-sm leading-relaxed text-foreground/70">
               <li>1. Submit only surveillance infrastructure visible from a public place.</li>
-              <li>2. Not submit markers for excluded categories: shelters, schools, defence and correctional sites, private residences, embassies, and other sensitive sites.</li>
+              <li>
+                2. Not submit cameras that exist to secure or monitor a sensitive site, such as a shelter, school,
+                defence or correctional site, private residence, or embassy. A camera that is only near one, for
+                example on a public road, is assessed case by case.
+              </li>
               <li>3. Not include personal information about identifiable individuals in notes or operator fields.</li>
               <li>
                 4. Describe only what&rsquo;s publicly observable, not confirmed technical
