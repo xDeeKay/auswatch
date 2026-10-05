@@ -41,6 +41,9 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
             </Link>
             {isAdmin && (
               <>
+                <Link href="/admin/imports" className={cn(linkClass, itemClass)}>
+                  Imports
+                </Link>
                 <Link href="/admin/moderators" className={cn(linkClass, itemClass)}>
                   Moderators
                 </Link>
@@ -75,6 +78,9 @@ export function ModNav({ role, userLabel }: { role: ModeratorRole; userLabel: st
             </Link>
             {isAdmin && (
               <>
+                <Link href="/admin/imports" className={mobileLinkClass}>
+                  Imports
+                </Link>
                 <Link href="/admin/moderators" className={mobileLinkClass}>
                   Moderators
                 </Link>
