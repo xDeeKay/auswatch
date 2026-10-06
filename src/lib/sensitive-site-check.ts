@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { haversineMeters, computeBoundingBox, type BoundingBox, type Bounds } from "@/lib/geo";
+import { distanceToBoundsMeters, haversineMeters, computeBoundingBox, type BoundingBox, type Bounds } from "@/lib/geo";
 import { requireEnvNumber } from "@/lib/required-env";
 import { SensitiveZoneCategory, SensitiveSiteMatchSource } from "@/generated/prisma/enums";
 
@@ -194,16 +194,54 @@ export async function fetchOsmFeaturesInBbox(bbox: BoundingBox): Promise<OsmSens
   return features;
 }
 
+// How close a camera has to be to a mapped site, by what kind of site it is,
+// before it is flagged for a moderator. Read from the environment so no value
+// lives in source.
+export type OsmRadii = {
+  school: number;
+  embassy: number;
+  military: number;
+  correctional: number;
+};
+
+const OSM_RADIUS_ENV_BY_CATEGORY: Record<keyof OsmRadii, string> = {
+  school: "OSM_SENSITIVE_SITE_RADIUS_METERS_SCHOOL",
+  embassy: "OSM_SENSITIVE_SITE_RADIUS_METERS_EMBASSY",
+  military: "OSM_SENSITIVE_SITE_RADIUS_METERS_MILITARY",
+  correctional: "OSM_SENSITIVE_SITE_RADIUS_METERS_CORRECTIONAL",
+};
+
+export function getOsmRadiiMeters(): OsmRadii {
+  return {
+    school: requireEnvNumber(OSM_RADIUS_ENV_BY_CATEGORY.school),
+    embassy: requireEnvNumber(OSM_RADIUS_ENV_BY_CATEGORY.embassy),
+    military: requireEnvNumber(OSM_RADIUS_ENV_BY_CATEGORY.military),
+    correctional: requireEnvNumber(OSM_RADIUS_ENV_BY_CATEGORY.correctional),
+  };
+}
+
+export function maxOsmRadiusMeters(radii: OsmRadii): number {
+  return Math.max(...Object.values(radii));
+}
+
+// A category the radii don't name falls back to the widest radius, so an
+// unexpected feature type is flagged rather than quietly ignored.
+function radiusForCategory(radii: OsmRadii, category: SensitiveZoneCategory): number {
+  return category in radii ? radii[category as keyof OsmRadii] : maxOsmRadiusMeters(radii);
+}
+
 export function matchOsmFeatures(
   point: Point,
   features: OsmSensitiveFeature[],
-  radiusMeters: number
+  radii: OsmRadii
 ): SensitiveSiteMatchResult[] {
   const matches: SensitiveSiteMatchResult[] = [];
 
   for (const feature of features) {
-    const distanceMeters = haversineMeters(point, { lat: feature.lat, lng: feature.lng });
-    if (distanceMeters <= radiusMeters) {
+    const distanceMeters = feature.bounds
+      ? distanceToBoundsMeters(point, feature.bounds)
+      : haversineMeters(point, { lat: feature.lat, lng: feature.lng });
+    if (distanceMeters <= radiusForCategory(radii, feature.category)) {
       matches.push({
         source: SensitiveSiteMatchSource.osm_overpass,
         category: feature.category,
@@ -221,7 +259,7 @@ export function matchOsmFeatures(
 async function checkOsmCache(
   point: Point
 ): Promise<{ matches: SensitiveSiteMatchResult[]; error: string | null }> {
-  const radiusMeters = requireEnvNumber("OSM_SENSITIVE_SITE_CHECK_RADIUS_METERS");
+  const radii = getOsmRadiiMeters();
   const maxAgeHours = requireEnvNumber("OSM_SENSITIVE_SITE_CACHE_MAX_AGE_HOURS");
 
   const newest = await prisma.sensitiveSiteOsmCache.findFirst({
@@ -241,15 +279,33 @@ async function checkOsmCache(
     };
   }
 
-  const bbox = computeBoundingBox([point], radiusMeters);
+  const withoutExtent = await prisma.sensitiveSiteOsmCache.findFirst({
+    where: { minLat: null },
+    select: { id: true },
+  });
+  if (withoutExtent) {
+    return { matches: [], error: "Sensitive-site cache predates stored site extents and needs a refresh" };
+  }
+
+  const bbox = computeBoundingBox([point], maxOsmRadiusMeters(radii));
   const rows = await prisma.sensitiveSiteOsmCache.findMany({
     where: {
-      lat: { gte: bbox.south, lte: bbox.north },
-      lng: { gte: bbox.west, lte: bbox.east },
+      minLat: { lte: bbox.north },
+      maxLat: { gte: bbox.south },
+      minLng: { lte: bbox.east },
+      maxLng: { gte: bbox.west },
     },
   });
 
-  return { matches: matchOsmFeatures(point, rows, radiusMeters), error: null };
+  const features: OsmSensitiveFeature[] = rows.map((row) => ({
+    lat: row.lat,
+    lng: row.lng,
+    category: row.category,
+    detail: row.detail,
+    bounds: { minLat: row.minLat!, minLng: row.minLng!, maxLat: row.maxLat!, maxLng: row.maxLng! },
+  }));
+
+  return { matches: matchOsmFeatures(point, features, radii), error: null };
 }
 
 export async function checkSensitiveSite(point: Point): Promise<SensitiveSiteCheckResult> {

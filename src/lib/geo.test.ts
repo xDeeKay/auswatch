@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { haversineMeters, computeBoundingBox } from "./geo";
+import { haversineMeters, computeBoundingBox, distanceToBoundsMeters } from "./geo";
 
 describe("haversineMeters", () => {
   it("returns 0 for the same point", () => {
@@ -63,5 +63,36 @@ describe("computeBoundingBox", () => {
     const latSpanMeters = (box.north - box.south) * 111320;
     expect(latSpanMeters).toBeGreaterThan(1900);
     expect(latSpanMeters).toBeLessThan(2100);
+  });
+});
+
+describe("distanceToBoundsMeters", () => {
+  const bounds = { minLat: -35.31, minLng: 149.1, maxLat: -35.29, maxLng: 149.12 };
+
+  it("is 0 for a point inside the bounds", () => {
+    expect(distanceToBoundsMeters({ lat: -35.3, lng: 149.11 }, bounds)).toBe(0);
+  });
+
+  it("is 0 for a point on the edge", () => {
+    expect(distanceToBoundsMeters({ lat: -35.29, lng: 149.11 }, bounds)).toBe(0);
+  });
+
+  it("measures straight to the nearest edge when the point is beside the box", () => {
+    const point = { lat: -35.3, lng: 149.1 - 0.001 };
+    const expected = haversineMeters(point, { lat: -35.3, lng: 149.1 });
+    expect(distanceToBoundsMeters(point, bounds)).toBeCloseTo(expected, 6);
+  });
+
+  it("measures to the nearest corner when the point is diagonal to the box", () => {
+    const point = { lat: -35.29 + 0.001, lng: 149.12 + 0.001 };
+    const expected = haversineMeters(point, { lat: -35.29, lng: 149.12 });
+    expect(distanceToBoundsMeters(point, bounds)).toBeCloseTo(expected, 6);
+  });
+
+  it("reduces to a plain point distance for a zero-area box", () => {
+    const site = { lat: -35.3, lng: 149.1 };
+    const point = { lat: -35.301, lng: 149.1 };
+    const box = { minLat: site.lat, minLng: site.lng, maxLat: site.lat, maxLng: site.lng };
+    expect(distanceToBoundsMeters(point, box)).toBeCloseTo(haversineMeters(point, site), 6);
   });
 });

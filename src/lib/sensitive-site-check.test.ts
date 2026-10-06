@@ -18,7 +18,18 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-const { matchZones, mapOsmTagsToCategory, matchOsmFeatures, checkSensitiveSite, fetchOsmFeaturesInBbox } = await import("./sensitive-site-check");
+const { matchZones, mapOsmTagsToCategory, matchOsmFeatures, checkSensitiveSite, getOsmRadiiMeters, fetchOsmFeaturesInBbox } = await import(
+  "./sensitive-site-check"
+);
+
+const RADII = { school: 100, embassy: 100, military: 100, correctional: 100 };
+
+function stubRadiiEnv(radii = { school: 100, embassy: 200, military: 300, correctional: 400 }) {
+  vi.stubEnv("OSM_SENSITIVE_SITE_RADIUS_METERS_SCHOOL", String(radii.school));
+  vi.stubEnv("OSM_SENSITIVE_SITE_RADIUS_METERS_EMBASSY", String(radii.embassy));
+  vi.stubEnv("OSM_SENSITIVE_SITE_RADIUS_METERS_MILITARY", String(radii.military));
+  vi.stubEnv("OSM_SENSITIVE_SITE_RADIUS_METERS_CORRECTIONAL", String(radii.correctional));
+}
 
 describe("matchZones", () => {
   const point = { lat: -31.9505, lng: 115.8605 };
@@ -96,7 +107,7 @@ describe("matchOsmFeatures", () => {
     const features = [
       { lat: -31.9505, lng: 115.8605, category: SensitiveZoneCategory.school, detail: "school" },
     ];
-    const matches = matchOsmFeatures(point, features, 100);
+    const matches = matchOsmFeatures(point, features, RADII);
     expect(matches).toHaveLength(1);
     expect(matches[0]).toMatchObject({
       source: SensitiveSiteMatchSource.osm_overpass,
@@ -111,15 +122,67 @@ describe("matchOsmFeatures", () => {
     const features = [
       { lat: -33.8688, lng: 151.2093, category: SensitiveZoneCategory.school, detail: "school" },
     ];
-    expect(matchOsmFeatures(point, features, 100)).toHaveLength(0);
+    expect(matchOsmFeatures(point, features, RADII)).toHaveLength(0);
   });
 
   it("checks each feature against the same radius independently, unlike a single-query bbox fetch", () => {
     const near = { lat: -31.9505, lng: 115.8605, category: SensitiveZoneCategory.military, detail: "base" };
     const far = { lat: -33.8688, lng: 151.2093, category: SensitiveZoneCategory.embassy, detail: "embassy" };
-    const matches = matchOsmFeatures(point, [near, far], 100);
+    const matches = matchOsmFeatures(point, [near, far], RADII);
     expect(matches).toHaveLength(1);
     expect(matches[0]?.category).toBe(SensitiveZoneCategory.military);
+  });
+});
+
+describe("matchOsmFeatures per-category radius and site extent", () => {
+  const point = { lat: -35.3, lng: 149.1 };
+  // About 0.0009 degrees of latitude is roughly 100 m.
+  const northBy = (meters: number) => ({ lat: point.lat + meters / 111_195, lng: point.lng });
+
+  it("applies each category's own radius to a point site", () => {
+    const radii = { school: 100, embassy: 300, military: 500, correctional: 500 };
+    const at200 = northBy(200);
+    const school = { ...at200, category: SensitiveZoneCategory.school, detail: "school" };
+    const embassy = { ...at200, category: SensitiveZoneCategory.embassy, detail: "embassy" };
+
+    expect(matchOsmFeatures(point, [school], radii)).toHaveLength(0);
+    expect(matchOsmFeatures(point, [embassy], radii)).toHaveLength(1);
+  });
+
+  it("measures to the edge of a large site, not its centre", () => {
+    const radii = { school: 100, embassy: 100, military: 100, correctional: 100 };
+    const centre = northBy(2000);
+    const base = {
+      ...centre,
+      category: SensitiveZoneCategory.military,
+      detail: "base",
+      bounds: { minLat: point.lat + 50 / 111_195, minLng: point.lng - 0.02, maxLat: point.lat + 4000 / 111_195, maxLng: point.lng + 0.02 },
+    };
+
+    const matches = matchOsmFeatures(point, [base], radii);
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]!.distanceMeters).toBeGreaterThan(40);
+    expect(matches[0]!.distanceMeters).toBeLessThan(60);
+  });
+
+  it("reports distance 0 for a point inside a site's extent", () => {
+    const radii = { school: 100, embassy: 100, military: 100, correctional: 100 };
+    const base = {
+      ...point,
+      category: SensitiveZoneCategory.military,
+      detail: "base",
+      bounds: { minLat: point.lat - 0.01, minLng: point.lng - 0.01, maxLat: point.lat + 0.01, maxLng: point.lng + 0.01 },
+    };
+
+    expect(matchOsmFeatures(point, [base], radii)[0]!.distanceMeters).toBe(0);
+  });
+
+  it("falls back to the widest radius for a category the radii do not name", () => {
+    const radii = { school: 50, embassy: 50, military: 500, correctional: 50 };
+    const feature = { ...northBy(300), category: SensitiveZoneCategory.dv_shelter, detail: "" };
+
+    expect(matchOsmFeatures(point, [feature], radii)).toHaveLength(1);
   });
 });
 
@@ -195,6 +258,21 @@ describe("fetchOsmFeaturesInBbox", () => {
   });
 });
 
+describe("getOsmRadiiMeters", () => {
+  it("reads one radius per category from the environment", () => {
+    stubRadiiEnv({ school: 11, embassy: 22, military: 33, correctional: 44 });
+    expect(getOsmRadiiMeters()).toEqual({ school: 11, embassy: 22, military: 33, correctional: 44 });
+    vi.unstubAllEnvs();
+  });
+
+  it("throws rather than defaulting when a radius is missing", () => {
+    stubRadiiEnv();
+    vi.stubEnv("OSM_SENSITIVE_SITE_RADIUS_METERS_EMBASSY", "");
+    expect(() => getOsmRadiiMeters()).toThrow(/OSM_SENSITIVE_SITE_RADIUS_METERS_EMBASSY/);
+    vi.unstubAllEnvs();
+  });
+});
+
 describe("mapOsmTagsToCategory", () => {
   it("maps amenity=school to school", () => {
     expect(mapOsmTagsToCategory({ amenity: "school" })).toBe(SensitiveZoneCategory.school);
@@ -229,7 +307,18 @@ describe("checkSensitiveSite", () => {
   const point = { lat: -31.9505, lng: 115.8605 };
   const maxAgeHours = Number(process.env.OSM_SENSITIVE_SITE_CACHE_MAX_AGE_HOURS);
 
+  function mockCache(newest: unknown, withoutExtent: unknown = null) {
+    cacheFindFirstMock.mockImplementation((args: { where?: Record<string, unknown> }) =>
+      Promise.resolve(args?.where && "minLat" in args.where ? withoutExtent : newest)
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
+    stubRadiiEnv();
     findManyMock.mockReset();
     findManyMock.mockResolvedValue([]);
     cacheFindFirstMock.mockReset();
@@ -241,7 +330,7 @@ describe("checkSensitiveSite", () => {
     findManyMock.mockResolvedValue([
       { id: "z1", category: SensitiveZoneCategory.school, lat: point.lat, lng: point.lng, radiusMeters: 100 },
     ]);
-    cacheFindFirstMock.mockResolvedValue(null);
+    mockCache(null);
 
     const result = await checkSensitiveSite(point);
 
@@ -253,7 +342,7 @@ describe("checkSensitiveSite", () => {
 
   it("records a check_error when the cache is older than the configured max age", async () => {
     const tooOld = new Date(Date.now() - (maxAgeHours + 1) * 60 * 60 * 1000);
-    cacheFindFirstMock.mockResolvedValue({ refreshedAt: tooOld });
+    mockCache({ refreshedAt: tooOld });
 
     const result = await checkSensitiveSite(point);
 
@@ -263,7 +352,7 @@ describe("checkSensitiveSite", () => {
   });
 
   it("returns no matches and no errors when the cache is fresh and nothing is nearby", async () => {
-    cacheFindFirstMock.mockResolvedValue({ refreshedAt: new Date() });
+    mockCache({ refreshedAt: new Date() });
     cacheFindManyMock.mockResolvedValue([]);
 
     const result = await checkSensitiveSite(point);
@@ -273,9 +362,18 @@ describe("checkSensitiveSite", () => {
   });
 
   it("matches a nearby cached feature when the cache is fresh", async () => {
-    cacheFindFirstMock.mockResolvedValue({ refreshedAt: new Date() });
+    mockCache({ refreshedAt: new Date() });
     cacheFindManyMock.mockResolvedValue([
-      { lat: point.lat, lng: point.lng, category: SensitiveZoneCategory.school, detail: "school" },
+      {
+        lat: point.lat,
+        lng: point.lng,
+        minLat: point.lat,
+        minLng: point.lng,
+        maxLat: point.lat,
+        maxLng: point.lng,
+        category: SensitiveZoneCategory.school,
+        detail: "school",
+      },
     ]);
 
     const result = await checkSensitiveSite(point);
@@ -283,5 +381,52 @@ describe("checkSensitiveSite", () => {
     expect(result.checkErrors).toHaveLength(0);
     expect(result.matches).toHaveLength(1);
     expect(result.matches[0]!.source).toBe(SensitiveSiteMatchSource.osm_overpass);
+  });
+
+  it("records a check_error when any cached row predates stored site extents", async () => {
+    mockCache({ refreshedAt: new Date() }, { id: "legacy-row" });
+
+    const result = await checkSensitiveSite(point);
+
+    expect(result.checkErrors).toHaveLength(1);
+    expect(result.checkErrors[0]!.message).toMatch(/refresh/i);
+    expect(result.matches).toHaveLength(0);
+    expect(cacheFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it("selects cached sites whose extent overlaps the widest radius around the point", async () => {
+    mockCache({ refreshedAt: new Date() });
+
+    await checkSensitiveSite(point);
+
+    const where = cacheFindManyMock.mock.calls[0]![0].where as Record<string, Record<string, number>>;
+    const widestMeters = 400;
+    const latPadding = widestMeters / 111_195;
+    expect(where.minLat!.lte).toBeCloseTo(point.lat + latPadding, 4);
+    expect(where.maxLat!.gte).toBeCloseTo(point.lat - latPadding, 4);
+    expect(where.minLng!.lte).toBeGreaterThan(point.lng);
+    expect(where.maxLng!.gte).toBeLessThan(point.lng);
+  });
+
+  it("matches a large cached site whose centre is far away but whose edge is near", async () => {
+    mockCache({ refreshedAt: new Date() });
+    cacheFindManyMock.mockResolvedValue([
+      {
+        lat: point.lat + 0.02,
+        lng: point.lng,
+        minLat: point.lat + 0.0002,
+        minLng: point.lng - 0.02,
+        maxLat: point.lat + 0.04,
+        maxLng: point.lng + 0.02,
+        category: SensitiveZoneCategory.military,
+        detail: "base",
+      },
+    ]);
+
+    const result = await checkSensitiveSite(point);
+
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0]!.category).toBe(SensitiveZoneCategory.military);
+    expect(result.matches[0]!.distanceMeters).toBeLessThan(100);
   });
 });

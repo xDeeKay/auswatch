@@ -21,6 +21,20 @@ export function haversineMeters(a: Point, b: Point): number {
   return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(h));
 }
 
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+// Distance from a point to the nearest edge of a lat/lng rectangle, or 0 when
+// the point is inside it. Measuring to the edge rather than a centre point
+// keeps a large site (a base, a campus) from looking far away when a camera
+// is right at its fence.
+export function distanceToBoundsMeters(point: Point, bounds: Bounds): number {
+  const nearest = {
+    lat: clamp(point.lat, bounds.minLat, bounds.maxLat),
+    lng: clamp(point.lng, bounds.minLng, bounds.maxLng),
+  };
+  return haversineMeters(point, nearest);
+}
+
 // Computes a lat/lng box enclosing every point, padded by bufferMeters on
 // every side. Used to turn a batch of known coordinates (a bulk import) into
 // a single bounding-box query instead of one query per point.
