@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { SensitiveZoneCategory, SensitiveSiteMatchSource } from "@/generated/prisma/enums";
 import { haversineMeters } from "./geo";
 
@@ -18,7 +18,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-const { matchZones, mapOsmTagsToCategory, matchOsmFeatures, checkSensitiveSite } = await import("./sensitive-site-check");
+const { matchZones, mapOsmTagsToCategory, matchOsmFeatures, checkSensitiveSite, fetchOsmFeaturesInBbox } = await import("./sensitive-site-check");
 
 describe("matchZones", () => {
   const point = { lat: -31.9505, lng: 115.8605 };
@@ -120,6 +120,78 @@ describe("matchOsmFeatures", () => {
     const matches = matchOsmFeatures(point, [near, far], 100);
     expect(matches).toHaveLength(1);
     expect(matches[0]?.category).toBe(SensitiveZoneCategory.military);
+  });
+});
+
+describe("fetchOsmFeaturesInBbox", () => {
+  const bbox = { south: -36, west: 148, north: -35, east: 150 };
+
+  function mockOverpass(body: unknown) {
+    vi.stubEnv("OVERPASS_TIMEOUT_MS", "1000");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) }));
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps a way that has bounds but no centre, centred on its bounds", async () => {
+    mockOverpass({
+      elements: [
+        {
+          type: "way",
+          bounds: { minlat: -35.4, minlon: 149.0, maxlat: -35.2, maxlon: 149.2 },
+          tags: { landuse: "military" },
+        },
+      ],
+    });
+
+    const features = await fetchOsmFeaturesInBbox(bbox);
+
+    expect(features).toHaveLength(1);
+    expect(features[0]).toMatchObject({
+      category: SensitiveZoneCategory.military,
+      bounds: { minLat: -35.4, minLng: 149.0, maxLat: -35.2, maxLng: 149.2 },
+    });
+    expect(features[0]!.lat).toBeCloseTo(-35.3, 6);
+    expect(features[0]!.lng).toBeCloseTo(149.1, 6);
+  });
+
+  it("gives a node a zero-area extent at its own position", async () => {
+    mockOverpass({ elements: [{ type: "node", lat: -35.3, lon: 149.1, tags: { amenity: "school" } }] });
+
+    const features = await fetchOsmFeaturesInBbox(bbox);
+
+    expect(features[0]).toMatchObject({
+      lat: -35.3,
+      lng: 149.1,
+      bounds: { minLat: -35.3, minLng: 149.1, maxLat: -35.3, maxLng: 149.1 },
+    });
+  });
+
+  it("still reads a way that carries a centre", async () => {
+    mockOverpass({ elements: [{ type: "way", center: { lat: -35.3, lon: 149.1 }, tags: { amenity: "embassy" } }] });
+
+    const features = await fetchOsmFeaturesInBbox(bbox);
+
+    expect(features).toHaveLength(1);
+    expect(features[0]).toMatchObject({ lat: -35.3, lng: 149.1, category: SensitiveZoneCategory.embassy });
+  });
+
+  it("skips an element with no usable position", async () => {
+    mockOverpass({ elements: [{ type: "way", tags: { amenity: "school" } }] });
+
+    expect(await fetchOsmFeaturesInBbox(bbox)).toHaveLength(0);
+  });
+
+  it("rejects a partial result flagged by an Overpass runtime error", async () => {
+    mockOverpass({
+      remark: "runtime error: Query ran out of memory",
+      elements: [{ type: "node", lat: -35.3, lon: 149.1, tags: { amenity: "school" } }],
+    });
+
+    await expect(fetchOsmFeaturesInBbox(bbox)).rejects.toThrow(/partial result/);
   });
 });
 

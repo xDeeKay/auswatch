@@ -208,6 +208,13 @@ model SensitiveSiteOsmCache {
   category    SensitiveZoneCategory
   lat         Float
   lng         Float
+  // Extent of the mapped site. A point site has min equal to max. Null only
+  // on rows cached before extents were stored, which the check treats as a
+  // stale cache.
+  minLat      Float?
+  minLng      Float?
+  maxLat      Float?
+  maxLng      Float?
   detail      String
   refreshedAt DateTime
 

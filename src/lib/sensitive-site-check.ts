@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { haversineMeters, computeBoundingBox, type BoundingBox } from "@/lib/geo";
+import { haversineMeters, computeBoundingBox, type BoundingBox, type Bounds } from "@/lib/geo";
 import { requireEnvNumber } from "@/lib/required-env";
 import { SensitiveZoneCategory, SensitiveSiteMatchSource } from "@/generated/prisma/enums";
 
@@ -85,10 +85,15 @@ export function mapOsmTagsToCategory(tags: Record<string, string>): SensitiveZon
   return null;
 }
 
+function midpoint(a: number | undefined, b: number | undefined): number | undefined {
+  return a === undefined || b === undefined ? undefined : (a + b) / 2;
+}
+
 type OverpassElement = {
   lat?: number;
   lon?: number;
   center?: { lat: number; lon: number };
+  bounds?: { minlat: number; minlon: number; maxlat: number; maxlon: number };
   tags?: Record<string, string>;
 };
 
@@ -105,6 +110,8 @@ export type OsmSensitiveFeature = {
   lng: number;
   category: SensitiveZoneCategory;
   detail: string;
+  /** Extent of the mapped site; a feature without one is treated as a point. */
+  bounds?: Bounds;
 };
 
 const BBOX_QUERY_TIMEOUT_SECONDS = 180;
@@ -123,7 +130,7 @@ function buildOverpassBboxQuery(bbox: BoundingBox): string {
       node["diplomatic"](${box});
       way["diplomatic"](${box});
     );
-    out center tags;
+    out center bb tags;
   `.trim();
 }
 
@@ -144,7 +151,15 @@ export async function fetchOsmFeaturesInBbox(bbox: BoundingBox): Promise<OsmSens
     throw new Error(`Overpass bounding-box query failed: ${response.status} ${response.statusText}`);
   }
 
-  const body = (await response.json()) as { elements?: OverpassElement[] };
+  const body = (await response.json()) as { elements?: OverpassElement[]; remark?: string };
+
+  // Overpass reports running out of time or memory as a 200 with a partial
+  // element list and a remark. Treating that as complete would cache a
+  // truncated list as if it were the whole picture.
+  if (body.remark && /runtime error/i.test(body.remark)) {
+    throw new Error(`Overpass bounding-box query returned a partial result: ${body.remark}`);
+  }
+
   const elements = body.elements ?? [];
 
   const features: OsmSensitiveFeature[] = [];
@@ -153,15 +168,26 @@ export async function fetchOsmFeaturesInBbox(bbox: BoundingBox): Promise<OsmSens
     const category = mapOsmTagsToCategory(tags);
     if (!category) continue;
 
-    const lat = element.lat ?? element.center?.lat;
-    const lng = element.lon ?? element.center?.lon;
+    // With "out center bb" Overpass returns a way's bounds but no centre.
+    const lat = element.lat ?? element.center?.lat ?? midpoint(element.bounds?.minlat, element.bounds?.maxlat);
+    const lng = element.lon ?? element.center?.lon ?? midpoint(element.bounds?.minlon, element.bounds?.maxlon);
     if (lat === undefined || lng === undefined) continue;
+
+    const bounds: Bounds = element.bounds
+      ? {
+          minLat: element.bounds.minlat,
+          minLng: element.bounds.minlon,
+          maxLat: element.bounds.maxlat,
+          maxLng: element.bounds.maxlon,
+        }
+      : { minLat: lat, minLng: lng, maxLat: lat, maxLng: lng };
 
     features.push({
       lat,
       lng,
       category,
       detail: tags.amenity ?? tags.landuse ?? tags.military ?? tags.diplomatic ?? "",
+      bounds,
     });
   }
 

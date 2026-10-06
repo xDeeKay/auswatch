@@ -50,6 +50,25 @@ describe("refreshSensitiveSiteOsmCache", () => {
     expect(createArgs.data[0]!.refreshedAt).toEqual(result.refreshedAt);
   });
 
+  it("stores each site's extent, falling back to the point for a feature without one", async () => {
+    fetchOsmFeaturesInBboxMock.mockResolvedValue([
+      {
+        lat: -31.95,
+        lng: 115.86,
+        category: SensitiveZoneCategory.military,
+        detail: "base",
+        bounds: { minLat: -31.99, minLng: 115.8, maxLat: -31.9, maxLng: 115.9 },
+      },
+      { lat: -33.87, lng: 151.21, category: SensitiveZoneCategory.school, detail: "school" },
+    ]);
+
+    await refreshSensitiveSiteOsmCache();
+
+    const createArgs = createManyMock.mock.calls[0]![0] as { data: Array<Record<string, number>> };
+    expect(createArgs.data[0]).toMatchObject({ minLat: -31.99, minLng: 115.8, maxLat: -31.9, maxLng: 115.9 });
+    expect(createArgs.data[1]).toMatchObject({ minLat: -33.87, minLng: 151.21, maxLat: -33.87, maxLng: 151.21 });
+  });
+
   it("leaves the existing cache untouched and returns an error when the fetch fails", async () => {
     fetchOsmFeaturesInBboxMock.mockRejectedValue(new Error("Overpass bounding-box query failed: 504"));
 

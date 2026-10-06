@@ -2,6 +2,8 @@ type Point = { lat: number; lng: number };
 
 export type BoundingBox = { south: number; west: number; north: number; east: number };
 
+export type Bounds = { minLat: number; minLng: number; maxLat: number; maxLng: number };
+
 const EARTH_RADIUS_METERS = 6371000;
 const METERS_PER_LAT_DEGREE = (Math.PI * EARTH_RADIUS_METERS) / 180;
 
