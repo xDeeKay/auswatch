@@ -10,7 +10,14 @@ import {
   PhotoModerationStatus,
   SensitiveSiteMatchSource,
 } from "@/generated/prisma/enums";
-import { TYPE_LABEL, CAPTURE_LABEL, STATUS_LABEL, HISTORY_EVENT_LABEL, OPERATOR_CATEGORY_LABEL } from "@/lib/camera-labels";
+import {
+  TYPE_LABEL,
+  CAPTURE_LABEL,
+  DEPLOYMENT_LABEL,
+  STATUS_LABEL,
+  HISTORY_EVENT_LABEL,
+  OPERATOR_CATEGORY_LABEL,
+} from "@/lib/camera-labels";
 import {
   REASON_CODE_LABEL,
   VERIFY_REASON_CODES,
@@ -248,6 +255,15 @@ export default async function CameraDetailPage({
                 <td className="py-1.5 text-foreground/85">
                   {CAPTURE_LABEL[camera.captures]}
                   {proposedSuffix("captures")}
+                </td>
+              </tr>
+              <tr className="border-t border-foreground/10">
+                <th scope="row" className="w-44 py-1.5 pr-4 text-left font-label text-xs font-normal text-foreground/50">
+                  DEPLOYMENT
+                </th>
+                <td className="py-1.5 text-foreground/85">
+                  {DEPLOYMENT_LABEL[camera.deployment]}
+                  {proposedSuffix("deployment")}
                 </td>
               </tr>
               <tr className="border-t border-foreground/10">

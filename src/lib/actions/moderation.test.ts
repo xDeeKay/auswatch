@@ -41,7 +41,7 @@ const camera = {
   state: AuState.wa,
   type: CameraType.alpr,
   moderationState: ModerationState.pending,
-  status: CameraStatus.unconfirmed,
+  status: CameraStatus.active,
 };
 
 const moderatorProfile = {

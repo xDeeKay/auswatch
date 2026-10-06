@@ -1,6 +1,6 @@
-import type { AuState, CameraStatus, CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/enums";
+import type { AuState, CameraStatus, CameraType, CaptureType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
 import type { ValidatedCorrection } from "@/lib/validation/correction";
-import { TYPE_LABEL, CAPTURE_LABEL, OPERATOR_CATEGORY_LABEL, STATUS_LABEL } from "@/lib/camera-labels";
+import { TYPE_LABEL, CAPTURE_LABEL, DEPLOYMENT_LABEL, OPERATOR_CATEGORY_LABEL, STATUS_LABEL } from "@/lib/camera-labels";
 
 export type CameraSnapshot = {
   lat: number;
@@ -9,6 +9,7 @@ export type CameraSnapshot = {
   operator: string;
   operatorCategory: OperatorCategory;
   captures: CaptureType;
+  deployment: Deployment;
   notes: string;
   state: AuState | null;
   status: CameraStatus;
@@ -21,6 +22,7 @@ export type CameraFieldDiff = {
   operator?: string;
   operatorCategory?: OperatorCategory;
   captures?: CaptureType;
+  deployment?: Deployment;
   notes?: string;
 };
 
@@ -46,6 +48,9 @@ export function buildCameraDiff(
   if (proposed.captures !== current.captures) {
     diff.captures = proposed.captures;
   }
+  if (proposed.deployment !== current.deployment) {
+    diff.deployment = proposed.deployment;
+  }
   if (proposed.notes !== current.notes) {
     diff.notes = proposed.notes;
   }
@@ -60,6 +65,7 @@ export type ProposedCameraFields = {
   proposedOperator: string | null;
   proposedOperatorCategory: OperatorCategory | null;
   proposedCaptures: CaptureType | null;
+  proposedDeployment: Deployment | null;
   proposedNotes: string | null;
   reportedRemoved: boolean;
 };
@@ -86,6 +92,14 @@ export function buildCorrectionDiffRows(
       label: "Appears to capture",
       before: CAPTURE_LABEL[camera.captures],
       after: CAPTURE_LABEL[correction.proposedCaptures],
+    });
+  }
+  if (correction.proposedDeployment !== null && correction.proposedDeployment !== camera.deployment) {
+    rows.push({
+      field: "deployment",
+      label: "Deployment",
+      before: DEPLOYMENT_LABEL[camera.deployment],
+      after: DEPLOYMENT_LABEL[correction.proposedDeployment],
     });
   }
   if (
@@ -115,12 +129,12 @@ export function buildCorrectionDiffRows(
       after: correction.proposedNotes || "(none)",
     });
   }
-  if (correction.reportedRemoved && camera.status !== "removed") {
+  if (correction.reportedRemoved && camera.status !== "inactive") {
     rows.push({
       field: "status",
       label: "Status",
       before: STATUS_LABEL[camera.status],
-      after: "Removed",
+      after: STATUS_LABEL.inactive,
     });
   }
   if (correction.proposedLat !== null && correction.proposedLng !== null) {

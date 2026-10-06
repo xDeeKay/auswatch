@@ -166,9 +166,11 @@
   border: 2px solid var(--marker-color, var(--color-accent));
 }
 
-.auswatch-marker-dot.auswatch-marker-dashed {
-  background: transparent;
-  border: 2px dashed var(--marker-color, var(--color-accent));
+/* Mobile enforcement sites are drawn as a diamond so they read differently
+   from a fixed camera circle even when type colour and status shape match. */
+.auswatch-marker-dot.auswatch-marker-mobile {
+  border-radius: 2px;
+  transform: rotate(45deg) scale(0.85);
 }
 
 .auswatch-marker-dot.auswatch-marker-selected {

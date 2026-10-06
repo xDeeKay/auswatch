@@ -1,17 +1,23 @@
-import { AuState, CameraStatus, CameraType, CaptureType, HistoryEventType, OperatorCategory } from "@/generated/prisma/enums";
+import { AuState, CameraStatus, CameraType, CaptureType, Deployment, HistoryEventType, OperatorCategory } from "@/generated/prisma/enums";
 import type { ResolvedTheme } from "@/lib/theme";
 
 export const STATUS_COLOR: Record<CameraStatus, string> = {
   [CameraStatus.active]: "#C1443D",
-  [CameraStatus.removed]: "#5B8266",
-  [CameraStatus.unconfirmed]: "#6E7B86",
+  [CameraStatus.inactive]: "#5B8266",
 };
 
 export const STATUS_LABEL: Record<CameraStatus, string> = {
   [CameraStatus.active]: "Active",
-  [CameraStatus.removed]: "Removed",
-  [CameraStatus.unconfirmed]: "Unconfirmed",
+  [CameraStatus.inactive]: "Inactive",
 };
+
+export const DEPLOYMENT_LABEL: Record<Deployment, string> = {
+  [Deployment.fixed]: "Fixed",
+  [Deployment.mobile]: "Mobile",
+  [Deployment.unknown]: "Unknown",
+};
+
+export const DEPLOYMENT_ORDER: Deployment[] = [Deployment.fixed, Deployment.mobile, Deployment.unknown];
 
 export const TYPE_LABEL: Record<CameraType, string> = {
   [CameraType.alpr]: "ALPR / Plate Reader",
@@ -123,10 +129,9 @@ export const STATE_LABEL: Record<AuState, string> = {
 };
 
 export const HISTORY_EVENT_LABEL: Record<HistoryEventType, string> = {
-  [HistoryEventType.sighted]: "Sighted",
-  [HistoryEventType.active]: "Verified Active",
-  [HistoryEventType.removed]: "Removed",
-  [HistoryEventType.unconfirmed]: "Marked Unconfirmed",
+  [HistoryEventType.added]: "Added",
+  [HistoryEventType.active]: "Marked active",
+  [HistoryEventType.inactive]: "Marked inactive",
   [HistoryEventType.relocated]: "Relocated",
   [HistoryEventType.corrected]: "Corrected",
 };

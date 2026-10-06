@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/enums";
+import { CameraType, CaptureType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
 
 export const submissionSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -8,6 +8,7 @@ export const submissionSchema = z.object({
   operatorCategory: z.enum(OperatorCategory),
   operator: z.string().trim().max(120).default(""),
   captures: z.enum(CaptureType),
+  deployment: z.enum(Deployment),
   notes: z.string().trim().max(2000).default(""),
 });
 

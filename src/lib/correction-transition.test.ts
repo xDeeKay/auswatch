@@ -4,6 +4,7 @@ import {
   CameraStatus,
   CameraType,
   CaptureType,
+  Deployment,
   CorrectionReportStatus,
   HistoryEventType,
   ModerationActionType,
@@ -22,6 +23,7 @@ const camera: CameraSnapshot = {
   operatorCategory: OperatorCategory.state_police,
   operator: "WA Police",
   captures: CaptureType.plates,
+  deployment: Deployment.fixed,
   notes: "Mounted on a light pole.",
   state: AuState.wa,
   status: CameraStatus.active,
@@ -37,6 +39,7 @@ function pendingCorrection(overrides: Partial<PendingCorrection> = {}): PendingC
     proposedOperator: null,
     proposedOperatorCategory: null,
     proposedCaptures: null,
+    proposedDeployment: null,
     proposedNotes: null,
     reportedRemoved: false,
     proposedSensitiveSiteMatches: null,
@@ -55,6 +58,17 @@ const input = {
 };
 
 describe("buildCorrectionApproveTransition", () => {
+  it("applies a proposed deployment change and describes it in the history note", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedDeployment: Deployment.mobile }),
+      camera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate).toEqual({ deployment: Deployment.mobile });
+    expect(plan.historyEvent?.note).toBe('Deployment corrected from "Fixed" to "Mobile"');
+  });
+
   it("only sets the fields that were actually proposed", () => {
     const plan = buildCorrectionApproveTransition(
       pendingCorrection({ proposedOperator: "NSW Police" }),
@@ -290,17 +304,17 @@ describe("buildCorrectionApproveTransition", () => {
 
   it("sets status to removed when the correction reports the camera removed", () => {
     const plan = buildCorrectionApproveTransition(pendingCorrection({ reportedRemoved: true }), camera, input, now);
-    expect(plan.cameraUpdate).toEqual({ status: CameraStatus.removed });
+    expect(plan.cameraUpdate).toEqual({ status: CameraStatus.inactive });
   });
 
   it("uses the removed HistoryEventType and notes the status change when reporting a removal", () => {
     const plan = buildCorrectionApproveTransition(pendingCorrection({ reportedRemoved: true }), camera, input, now);
-    expect(plan.historyEvent?.eventType).toBe(HistoryEventType.removed);
-    expect(plan.historyEvent?.note).toBe('Status corrected from "Active" to "Removed"');
+    expect(plan.historyEvent?.eventType).toBe(HistoryEventType.inactive);
+    expect(plan.historyEvent?.note).toBe('Status corrected from "Active" to "Inactive"');
   });
 
   it("does not touch status when the camera is already removed", () => {
-    const alreadyRemovedCamera = { ...camera, status: CameraStatus.removed };
+    const alreadyRemovedCamera = { ...camera, status: CameraStatus.inactive };
     const plan = buildCorrectionApproveTransition(
       pendingCorrection({ reportedRemoved: true }),
       alreadyRemovedCamera,
@@ -318,8 +332,8 @@ describe("buildCorrectionApproveTransition", () => {
       input,
       now
     );
-    expect(plan.cameraUpdate).toEqual({ status: CameraStatus.removed, operator: "NSW Police" });
-    expect(plan.historyEvent?.eventType).toBe(HistoryEventType.removed);
+    expect(plan.cameraUpdate).toEqual({ status: CameraStatus.inactive, operator: "NSW Police" });
+    expect(plan.historyEvent?.eventType).toBe(HistoryEventType.inactive);
   });
 
   it("audit entry before/after includes state when the location changed", () => {

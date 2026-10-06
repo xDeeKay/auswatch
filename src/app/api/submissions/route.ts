@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         data: {
           cameraId: camera.id,
           date: submittedAt,
-          eventType: HistoryEventType.sighted,
+          eventType: HistoryEventType.added,
           note: "",
         },
       });

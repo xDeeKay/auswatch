@@ -3,8 +3,17 @@
 import { useState } from "react";
 import LocationPicker from "@/components/LocationPicker";
 import type { LatLng } from "@/components/LocationPickerView";
-import { CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/enums";
-import { TYPE_LABEL, TYPE_ORDER, CAPTURE_LABEL, CAPTURE_ORDER, OPERATOR_CATEGORY_LABEL, OPERATOR_NAME_PROMPT } from "@/lib/camera-labels";
+import { CameraType, CaptureType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
+import {
+  TYPE_LABEL,
+  TYPE_ORDER,
+  CAPTURE_LABEL,
+  CAPTURE_ORDER,
+  DEPLOYMENT_LABEL,
+  DEPLOYMENT_ORDER,
+  OPERATOR_CATEGORY_LABEL,
+  OPERATOR_NAME_PROMPT,
+} from "@/lib/camera-labels";
 import type { CorrectableCamera } from "@/lib/cameras";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +30,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
   const [operatorCategory, setOperatorCategory] = useState<OperatorCategory>(camera.operatorCategory);
   const [operator, setOperator] = useState(camera.operator);
   const [captures, setCaptures] = useState<CaptureType>(camera.captures);
+  const [deployment, setDeployment] = useState<Deployment>(camera.deployment);
   const [notes, setNotes] = useState(camera.notes);
   const [location, setLocation] = useState<LatLng | null>({ lat: camera.lat, lng: camera.lng });
   const [reportedRemoved, setReportedRemoved] = useState(false);
@@ -52,6 +62,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
           operatorCategory,
           operator,
           captures,
+          deployment,
           notes,
           reportedRemoved,
           reporterNote,
@@ -135,6 +146,26 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
             <p className="text-xs text-error">{fieldErrors.captures[0]}</p>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className={fieldLabel} htmlFor="deployment">
+          DEPLOYMENT
+        </label>
+        <select
+          id="deployment"
+          className={singleLineClass}
+          value={deployment}
+          onChange={(e) => setDeployment(e.target.value as Deployment)}
+          required
+        >
+          {DEPLOYMENT_ORDER.map((d) => (
+            <option key={d} value={d}>
+              {DEPLOYMENT_LABEL[d]}
+            </option>
+          ))}
+        </select>
+        {fieldErrors.deployment && <p className="text-xs text-error">{fieldErrors.deployment[0]}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">

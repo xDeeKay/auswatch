@@ -113,9 +113,10 @@ export function buildCorrectionApproveTransition(
   if (correction.proposedOperator !== null) cameraUpdate.operator = correction.proposedOperator;
   if (correction.proposedOperatorCategory !== null) cameraUpdate.operatorCategory = correction.proposedOperatorCategory;
   if (correction.proposedCaptures !== null) cameraUpdate.captures = correction.proposedCaptures;
+  if (correction.proposedDeployment !== null) cameraUpdate.deployment = correction.proposedDeployment;
   if (correction.proposedNotes !== null) cameraUpdate.notes = correction.proposedNotes;
-  const reportedRemoved = correction.reportedRemoved && camera.status !== CameraStatus.removed;
-  if (reportedRemoved) cameraUpdate.status = CameraStatus.removed;
+  const reportedRemoved = correction.reportedRemoved && camera.status !== CameraStatus.inactive;
+  if (reportedRemoved) cameraUpdate.status = CameraStatus.inactive;
 
   const newSensitiveSiteMatches: Prisma.SensitiveSiteMatchCreateManyInput[] =
     correction.proposedLat !== null && correction.proposedLng !== null
@@ -153,7 +154,7 @@ export function buildCorrectionApproveTransition(
         : {
             cameraId: input.cameraId,
             date: now,
-            eventType: reportedRemoved ? HistoryEventType.removed : HistoryEventType.corrected,
+            eventType: reportedRemoved ? HistoryEventType.inactive : HistoryEventType.corrected,
             note: changeDescription,
           },
     correctionUpdate: { status: CorrectionReportStatus.approved, reviewedAt: now },

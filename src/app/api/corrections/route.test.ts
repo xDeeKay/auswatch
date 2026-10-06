@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CameraStatus, CameraType, CaptureType, ModerationState, OperatorCategory } from "@/generated/prisma/enums";
+import { CameraStatus, CameraType, CaptureType, Deployment, ModerationState, OperatorCategory } from "@/generated/prisma/enums";
 
 const cameraFindUniqueMock = vi.fn();
 const correctionReportCountMock = vi.fn();
@@ -41,6 +41,7 @@ const camera = {
   operatorCategory: OperatorCategory.state_police,
   operator: "WA Police",
   captures: CaptureType.plates,
+  deployment: Deployment.fixed,
   notes: "Mounted on a light pole.",
   status: CameraStatus.active,
   moderationState: ModerationState.verified,
@@ -55,6 +56,7 @@ function validBody(overrides: Record<string, unknown> = {}) {
     operatorCategory: camera.operatorCategory,
     operator: camera.operator,
     captures: camera.captures,
+    deployment: camera.deployment,
     notes: camera.notes,
     reporterNote: "",
     ...overrides,
@@ -197,7 +199,7 @@ describe("POST /api/corrections anti-enumeration", () => {
   });
 
   it("ignores a removal report for a camera that's already removed", async () => {
-    cameraFindUniqueMock.mockResolvedValue({ ...camera, status: CameraStatus.removed });
+    cameraFindUniqueMock.mockResolvedValue({ ...camera, status: CameraStatus.inactive });
 
     const res = await POST(postRequest(validBody({ reportedRemoved: true })));
 

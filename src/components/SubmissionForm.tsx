@@ -3,8 +3,17 @@
 import { useState } from "react";
 import LocationPicker from "@/components/LocationPicker";
 import type { LatLng } from "@/components/LocationPickerView";
-import { CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/enums";
-import { TYPE_LABEL, TYPE_ORDER, CAPTURE_LABEL, CAPTURE_ORDER, OPERATOR_CATEGORY_LABEL, OPERATOR_NAME_PROMPT } from "@/lib/camera-labels";
+import { CameraType, CaptureType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
+import {
+  TYPE_LABEL,
+  TYPE_ORDER,
+  CAPTURE_LABEL,
+  CAPTURE_ORDER,
+  DEPLOYMENT_LABEL,
+  DEPLOYMENT_ORDER,
+  OPERATOR_CATEGORY_LABEL,
+  OPERATOR_NAME_PROMPT,
+} from "@/lib/camera-labels";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { Button } from "@/components/ui/Button";
 
@@ -20,6 +29,7 @@ export default function SubmissionForm() {
   const [operatorCategory, setOperatorCategory] = useState<OperatorCategory | "">("");
   const [operator, setOperator] = useState("");
   const [captures, setCaptures] = useState<CaptureType | "">("");
+  const [deployment, setDeployment] = useState<Deployment | "">("");
   const [notes, setNotes] = useState("");
   const [location, setLocation] = useState<LatLng | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
@@ -29,11 +39,16 @@ export default function SubmissionForm() {
   const namePrompt = operatorCategory === "" ? undefined : OPERATOR_NAME_PROMPT[operatorCategory];
 
   const canSubmit =
-    type !== "" && operatorCategory !== "" && captures !== "" && location !== null && state !== "submitting";
+    type !== "" &&
+    operatorCategory !== "" &&
+    captures !== "" &&
+    deployment !== "" &&
+    location !== null &&
+    state !== "submitting";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!location || type === "" || operatorCategory === "" || captures === "") return;
+    if (!location || type === "" || operatorCategory === "" || captures === "" || deployment === "") return;
 
     setState("submitting");
     setFieldErrors({});
@@ -49,6 +64,7 @@ export default function SubmissionForm() {
           operatorCategory,
           operator,
           captures,
+          deployment,
           notes,
         })
       );
@@ -136,6 +152,29 @@ export default function SubmissionForm() {
             <p className="text-xs text-error">{fieldErrors.captures[0]}</p>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className={fieldLabel} htmlFor="deployment">
+          DEPLOYMENT
+        </label>
+        <select
+          id="deployment"
+          className={singleLineClass}
+          value={deployment}
+          onChange={(e) => setDeployment(e.target.value as Deployment)}
+          required
+        >
+          <option value="" disabled>
+            Select how it is deployed
+          </option>
+          {DEPLOYMENT_ORDER.map((d) => (
+            <option key={d} value={d}>
+              {DEPLOYMENT_LABEL[d]}
+            </option>
+          ))}
+        </select>
+        {fieldErrors.deployment && <p className="text-xs text-error">{fieldErrors.deployment[0]}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">

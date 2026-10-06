@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildCameraCreateData } from "./build-camera-create-data";
-import { CameraType, CaptureType, AuState, OperatorCategory } from "@/generated/prisma/enums";
+import { CameraType, CaptureType, AuState, Deployment, OperatorCategory } from "@/generated/prisma/enums";
 import type { ValidatedSubmission } from "@/lib/validation/submission";
 
 const baseInput: ValidatedSubmission = {
@@ -10,6 +10,7 @@ const baseInput: ValidatedSubmission = {
   operatorCategory: OperatorCategory.state_police,
   operator: "WA Police",
   captures: CaptureType.plates,
+  deployment: Deployment.fixed,
   notes: "Test note",
 };
 
@@ -23,10 +24,16 @@ describe("buildCameraCreateData", () => {
       operatorCategory: OperatorCategory.state_police,
       operator: "WA Police",
       captures: CaptureType.plates,
+      deployment: Deployment.fixed,
       notes: "Test note",
       reporterId: "server-token-123",
       state: AuState.wa,
     });
+  });
+
+  it("carries a mobile deployment through to the record", () => {
+    const data = buildCameraCreateData({ ...baseInput, deployment: Deployment.mobile }, "server-token-456");
+    expect(data.deployment).toBe(Deployment.mobile);
   });
 
   it("resolves state to null for coordinates that don't fall in any state", () => {

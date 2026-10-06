@@ -5,13 +5,15 @@ import MapView from "@/components/MapView";
 import { MapSearch } from "@/components/MapSearch";
 import { MapLoadingOverlay } from "@/components/MapLoadingOverlay";
 import type { FlyTarget } from "@/components/MapFlyTo";
-import { AuState, CameraStatus, CameraType, OperatorCategory } from "@/generated/prisma/enums";
+import { AuState, CameraStatus, CameraType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
 import type { PublicCamera } from "@/lib/cameras";
 import {
   OPERATOR_CATEGORY_LABEL,
   STATE_LABEL,
   STATUS_COLOR,
   STATUS_LABEL,
+  DEPLOYMENT_LABEL,
+  DEPLOYMENT_ORDER,
   TYPE_LABEL,
   TYPE_ORDER,
   typeColorFor,
@@ -20,7 +22,7 @@ import { CloseButton } from "@/components/ui/CloseButton";
 import { Label } from "@/components/ui/Field";
 import { useResolvedTheme } from "@/components/useResolvedTheme";
 
-const STATUS_ORDER: CameraStatus[] = [CameraStatus.active, CameraStatus.removed];
+const STATUS_ORDER: CameraStatus[] = [CameraStatus.active, CameraStatus.inactive];
 
 const OPERATOR_CATEGORY_ORDER: OperatorCategory[] = [
   OperatorCategory.state_police,
@@ -68,6 +70,7 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
   const typeColor = typeColorFor(useResolvedTheme());
   const [activeTypes, setActiveTypes] = useState<Set<CameraType>>(new Set(TYPE_ORDER));
   const [activeStatuses, setActiveStatuses] = useState<Set<CameraStatus>>(new Set(STATUS_ORDER));
+  const [activeDeployments, setActiveDeployments] = useState<Set<Deployment>>(new Set(DEPLOYMENT_ORDER));
   const [activeOperatorCategories, setActiveOperatorCategories] = useState<Set<OperatorCategory>>(
     new Set(OPERATOR_CATEGORY_ORDER)
   );
@@ -92,11 +95,12 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
       (camera) =>
         activeTypes.has(camera.type) &&
         activeStatuses.has(camera.status) &&
+        activeDeployments.has(camera.deployment) &&
         activeOperatorCategories.has(camera.operatorCategory) &&
         activeStates.has(camera.state) &&
         camera.createdAt.getFullYear() >= sinceYear
     );
-  }, [cameras, activeTypes, activeStatuses, activeOperatorCategories, activeStates, sinceYear]);
+  }, [cameras, activeTypes, activeStatuses, activeDeployments, activeOperatorCategories, activeStates, sinceYear]);
 
   function toggleType(type: CameraType) {
     setActiveTypes((prev) => {
@@ -112,6 +116,15 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
       const next = new Set(prev);
       if (next.has(status)) next.delete(status);
       else next.add(status);
+      return next;
+    });
+  }
+
+  function toggleDeployment(deployment: Deployment) {
+    setActiveDeployments((prev) => {
+      const next = new Set(prev);
+      if (next.has(deployment)) next.delete(deployment);
+      else next.add(deployment);
       return next;
     });
   }
@@ -168,6 +181,24 @@ export default function MapExplorer({ cameras }: { cameras: PublicCamera[] }) {
             return (
               <button key={type} type="button" onClick={() => toggleType(type)} className={className} style={style}>
                 <span className="capitalize">{TYPE_LABEL[type]}</span>
+                <span className="text-foreground/40">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-foreground/10 pt-4">
+          <Label>DEPLOYMENT</Label>
+          {DEPLOYMENT_ORDER.map((deployment) => {
+            const count = cameras.filter((c) => c.deployment === deployment).length;
+            return (
+              <button
+                key={deployment}
+                type="button"
+                onClick={() => toggleDeployment(deployment)}
+                className={chipClass(activeDeployments.has(deployment))}
+              >
+                <span className="capitalize">{DEPLOYMENT_LABEL[deployment]}</span>
                 <span className="text-foreground/40">{count}</span>
               </button>
             );

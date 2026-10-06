@@ -87,7 +87,7 @@ function baseEntry(overrides: Record<string, unknown> = {}) {
     entityId: "cam-1",
     action: "camera_verify",
     actorId: "mod-user-1",
-    before: { moderationState: "pending", status: "unconfirmed" },
+    before: { moderationState: "pending", status: "active" },
     after: { moderationState: "verified", status: "active" },
     summary: "Verified this submission.",
     createdAt: new Date("2026-09-10T00:00:00.000Z"),
@@ -150,7 +150,7 @@ describe("revertAuditLogEntry", () => {
     expect(result.status).toBe("ok");
     expect(cameraUpdateMock).toHaveBeenCalledWith({
       where: { id: "cam-1" },
-      data: { moderationState: "pending", status: "unconfirmed" },
+      data: { moderationState: "pending", status: "active" },
     });
     expect(historyEventCreateMock).toHaveBeenCalledTimes(1);
     expect(auditLogEntryUpdateManyMock).toHaveBeenCalledWith({
@@ -161,7 +161,7 @@ describe("revertAuditLogEntry", () => {
       data: expect.objectContaining({
         revertsEntryId: "entry-1",
         before: { moderationState: "verified", status: "active" },
-        after: { moderationState: "pending", status: "unconfirmed" },
+        after: { moderationState: "pending", status: "active" },
       }),
     });
   });
@@ -335,7 +335,7 @@ describe("revertAuditLogEntry", () => {
     const revertEntry = baseEntry({
       id: "revert-entry-1",
       before: { moderationState: "verified", status: "active" },
-      after: { moderationState: "pending", status: "unconfirmed" },
+      after: { moderationState: "pending", status: "active" },
       revertsEntryId: "entry-1",
     });
     auditLogEntryFindUniqueMock.mockResolvedValueOnce(revertEntry);
@@ -350,7 +350,7 @@ describe("revertAuditLogEntry", () => {
     });
     expect(auditLogEntryCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        before: { moderationState: "pending", status: "unconfirmed" },
+        before: { moderationState: "pending", status: "active" },
         after: { moderationState: "verified", status: "active" },
         revertsEntryId: "revert-entry-1",
       }),

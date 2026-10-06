@@ -8,6 +8,7 @@ import {
   STATE_LABEL,
   STATUS_COLOR,
   STATUS_LABEL,
+  DEPLOYMENT_LABEL,
   TYPE_LABEL,
   typeColorFor,
 } from "@/lib/camera-labels";
@@ -65,13 +66,12 @@ export function CameraCard({ camera, onClose }: { camera: PublicCamera; onClose:
             {STATUS_LABEL[camera.status]}
           </span>
         </Fact>
+        <Fact label="DEPLOYMENT">{DEPLOYMENT_LABEL[camera.deployment]}</Fact>
         <Fact label="APPEARS TO CAPTURE">{CAPTURE_LABEL[camera.captures]}</Fact>
         <Fact label="OPERATOR CATEGORY">{OPERATOR_CATEGORY_LABEL[camera.operatorCategory]}</Fact>
         <Fact label="STATE/TERRITORY">{camera.state ? STATE_LABEL[camera.state] : "Unknown"}</Fact>
-        {camera.operator && (
-          <Fact label="OWNER / OPERATOR">{camera.operator}</Fact>
-        )}
-        <Fact label="FIRST SIGHTED" mono>
+        <Fact label="OWNER / OPERATOR">{camera.operator || "Unknown"}</Fact>
+        <Fact label="ADDED" mono>
           {dateFormatter.format(camera.createdAt)}
         </Fact>
         <Fact label="COORDINATES" mono>

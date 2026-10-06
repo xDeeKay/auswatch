@@ -67,24 +67,24 @@ function buildTransition(
 }
 
 /**
- * A record already known to be removed (an import the source reports as
- * decommissioned) stays removed when verified: verifying confirms the record,
- * it doesn't claim the camera is back, and the original removal event keeps
+ * A record already known to be inactive (an import the source reports as
+ * decommissioned) stays inactive when verified: verifying confirms the record,
+ * it doesn't claim the camera is back, and the original inactive event keeps
  * its real date on the timeline.
  */
 export function buildVerifyTransition(
   input: ModerationDecisionInput,
   now: Date = new Date()
 ): ModerationTransitionPlan {
-  const staysRemoved = input.statusBefore === CameraStatus.removed;
+  const staysInactive = input.statusBefore === CameraStatus.inactive;
   return buildTransition(
     input,
     now,
     ModerationActionType.verify,
     AuditActionType.camera_verify,
     ModerationState.verified,
-    staysRemoved ? CameraStatus.removed : CameraStatus.active,
-    staysRemoved ? null : HistoryEventType.active
+    staysInactive ? CameraStatus.inactive : CameraStatus.active,
+    staysInactive ? null : HistoryEventType.active
   );
 }
 
@@ -98,7 +98,7 @@ export function buildRemoveTransition(
     ModerationActionType.remove,
     AuditActionType.camera_remove,
     ModerationState.removed,
-    CameraStatus.removed,
-    HistoryEventType.removed
+    CameraStatus.inactive,
+    HistoryEventType.inactive
   );
 }

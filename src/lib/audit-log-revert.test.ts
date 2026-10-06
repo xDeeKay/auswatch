@@ -29,7 +29,7 @@ describe("buildRevertAuditEntry", () => {
     entityType: "camera" as const,
     entityId: "cam-1",
     action: "camera_verify" as const,
-    before: { moderationState: "pending", status: "unconfirmed" },
+    before: { moderationState: "pending", status: "active" },
     after: { moderationState: "verified", status: "active" },
   };
 

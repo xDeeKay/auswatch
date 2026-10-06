@@ -1,7 +1,14 @@
-import type { AuState, CameraStatus, CameraType, CaptureType, ModerationState } from "@/generated/prisma/enums";
+import type {
+  AuState,
+  CameraStatus,
+  CameraType,
+  CaptureType,
+  Deployment,
+  ModerationState,
+} from "@/generated/prisma/enums";
 import { ModeratorRole } from "@/generated/prisma/enums";
 import { STATE_LABEL } from "@/lib/au-state-labels";
-import { STATUS_LABEL, TYPE_LABEL, CAPTURE_LABEL } from "@/lib/camera-labels";
+import { STATUS_LABEL, TYPE_LABEL, CAPTURE_LABEL, DEPLOYMENT_LABEL } from "@/lib/camera-labels";
 import { MODERATION_STATE_LABEL } from "@/lib/moderation-labels";
 import { summarizeGrants } from "@/lib/moderator-grants";
 import type { ModeratorGrantModel } from "@/generated/prisma/models";
@@ -15,6 +22,7 @@ const FIELD_LABEL: Record<string, string> = {
   type: "Type",
   operator: "Operator",
   captures: "Captures",
+  deployment: "Deployment",
   notes: "Notes",
   role: "Role",
   grants: "Grants",
@@ -41,6 +49,7 @@ function formatScalar(key: string, value: unknown): string {
   }
   if (key === "type" && typeof value === "string" && value in TYPE_LABEL) return TYPE_LABEL[value as CameraType];
   if (key === "captures" && typeof value === "string") return CAPTURE_LABEL[value as CaptureType] ?? value;
+  if (key === "deployment" && typeof value === "string") return DEPLOYMENT_LABEL[value as Deployment] ?? value;
   if (key === "role" && typeof value === "string") return value === ModeratorRole.admin ? "Admin" : "Moderator";
   if (key === "grants" && Array.isArray(value)) {
     return value.length === 0 ? "No access granted" : summarizeGrants(value as unknown as ModeratorGrantModel[]);

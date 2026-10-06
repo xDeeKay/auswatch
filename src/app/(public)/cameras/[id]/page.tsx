@@ -8,6 +8,7 @@ import {
   OPERATOR_CATEGORY_LABEL,
   STATE_LABEL,
   STATUS_LABEL,
+  DEPLOYMENT_LABEL,
   TYPE_LABEL,
 } from "@/lib/camera-labels";
 import { getSourceAttribution } from "@/lib/source-attribution";
@@ -47,7 +48,7 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="amber">{TYPE_LABEL[camera.type].toUpperCase()}</Badge>
             <span className="font-label text-xs text-foreground/50">
-              id {camera.id} &middot; first sighted {dateFormatter.format(camera.createdAt)}
+              id {camera.id} &middot; added {dateFormatter.format(camera.createdAt)}
             </span>
           </div>
           <h1 className="font-heading text-xl text-foreground">
@@ -89,12 +90,10 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
               <p className="font-label text-xs text-foreground/50">OPERATOR CATEGORY</p>
               <p className="mt-1 text-foreground/85">{OPERATOR_CATEGORY_LABEL[camera.operatorCategory]}</p>
             </div>
-            {camera.operator && (
-              <div>
-                <p className="font-label text-xs text-foreground/50">OWNER / OPERATOR</p>
-                <p className="mt-1 text-foreground/85">{camera.operator}</p>
-              </div>
-            )}
+            <div>
+              <p className="font-label text-xs text-foreground/50">OWNER / OPERATOR</p>
+              <p className="mt-1 text-foreground/85">{camera.operator || "Unknown"}</p>
+            </div>
             <div>
               <p className="font-label text-xs text-foreground/50">COORDINATES</p>
               <p className="mt-1 font-label text-foreground/85">
@@ -108,6 +107,10 @@ export default async function CameraRecordPage({ params }: { params: Promise<{ i
             <div>
               <p className="font-label text-xs text-foreground/50">STATUS</p>
               <p className="mt-1 text-foreground/85">{STATUS_LABEL[camera.status]}</p>
+            </div>
+            <div>
+              <p className="font-label text-xs text-foreground/50">DEPLOYMENT</p>
+              <p className="mt-1 text-foreground/85">{DEPLOYMENT_LABEL[camera.deployment]}</p>
             </div>
             <div>
               <p className="font-label text-xs text-foreground/50">APPEARS TO CAPTURE</p>

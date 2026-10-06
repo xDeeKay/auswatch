@@ -13,6 +13,7 @@ export function buildCameraCreateData(
     operator: input.operator,
     operatorCategory: input.operatorCategory,
     captures: input.captures,
+    deployment: input.deployment,
     notes: input.notes,
     reporterId: reporterToken,
     state: deriveAuState({ lat: input.lat, lng: input.lng }),

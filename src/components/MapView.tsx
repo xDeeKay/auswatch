@@ -24,8 +24,7 @@ const FIT_PADDING = { padding: [20, 20] as [number, number] };
 
 const STATUS_SHAPE_CLASS: Record<CameraStatus, string> = {
   [CameraStatus.active]: "auswatch-marker-solid",
-  [CameraStatus.removed]: "auswatch-marker-hollow",
-  [CameraStatus.unconfirmed]: "auswatch-marker-dashed",
+  [CameraStatus.inactive]: "auswatch-marker-hollow",
 };
 
 function markerIcon(camera: PublicCamera, selected: boolean, typeColor: Record<CameraType, string>) {
@@ -33,7 +32,7 @@ function markerIcon(camera: PublicCamera, selected: boolean, typeColor: Record<C
   const shapeClass = STATUS_SHAPE_CLASS[camera.status];
   return L.divIcon({
     className: "auswatch-marker",
-    html: `<span class="auswatch-marker-dot ${shapeClass}${selected ? " auswatch-marker-selected" : ""}" style="--marker-color:${color}"></span>`,
+    html: `<span class="auswatch-marker-dot ${shapeClass}${camera.deployment === "mobile" ? " auswatch-marker-mobile" : ""}${selected ? " auswatch-marker-selected" : ""}" style="--marker-color:${color}"></span>`,
     iconSize: [16, 16],
     iconAnchor: [8, 8],
   });

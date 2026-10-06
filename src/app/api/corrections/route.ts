@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     const diff = buildCameraDiff(camera, parsed.data);
-    const reportsRemoval = parsed.data.reportedRemoved && camera.status !== CameraStatus.removed;
+    const reportsRemoval = parsed.data.reportedRemoved && camera.status !== CameraStatus.inactive;
     if (Object.keys(diff).length === 0 && !reportsRemoval) {
       return acceptedResponse(currentToken);
     }
@@ -114,6 +114,7 @@ export async function POST(request: Request) {
         proposedOperator: diff.operator,
         proposedOperatorCategory: diff.operatorCategory,
         proposedCaptures: diff.captures,
+        proposedDeployment: diff.deployment,
         photos: photoResult.photos.length > 0
           ? {
               create: photoResult.photos.map((photo, i) => ({

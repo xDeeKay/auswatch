@@ -92,14 +92,14 @@ describe("bulkVerifyCleanImports", () => {
   });
 
   it("keeps a decommissioned record removed and adds no history event", async () => {
-    cameraFindManyMock.mockResolvedValue([{ ...candidate, status: CameraStatus.removed }]);
+    cameraFindManyMock.mockResolvedValue([{ ...candidate, status: CameraStatus.inactive }]);
 
     const result = await bulkVerifyCleanImports(ExternalImportSource.act_open_data);
 
     expect(result).toEqual({ status: "ok", verified: 1, flagged: 0, unchecked: 0, skipped: 0 });
     expect(cameraUpdateManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { moderationState: ModerationState.verified, status: CameraStatus.removed },
+        data: { moderationState: ModerationState.verified, status: CameraStatus.inactive },
       })
     );
     expect(historyEventCreateMock).not.toHaveBeenCalled();

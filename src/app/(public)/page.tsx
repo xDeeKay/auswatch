@@ -11,7 +11,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: 
 export default async function LandingPage() {
   const cameras = await getCameras();
   const activeCount = cameras.filter((c) => c.status === "active").length;
-  const removedCount = cameras.filter((c) => c.status === "removed").length;
+  const inactiveCount = cameras.filter((c) => c.status === "inactive").length;
   const lastAdded = cameras.reduce<Date | null>(
     (latest, camera) => (!latest || camera.createdAt > latest ? camera.createdAt : latest),
     null
@@ -19,7 +19,7 @@ export default async function LandingPage() {
 
   const stats = [
     { value: activeCount.toLocaleString("en-AU"), label: "CAMERAS ACTIVE" },
-    { value: removedCount.toLocaleString("en-AU"), label: "CAMERAS REMOVED" },
+    { value: inactiveCount.toLocaleString("en-AU"), label: "CAMERAS INACTIVE" },
     { value: lastAdded ? dateFormatter.format(lastAdded) : "-", label: "LAST RECORD ADDED" },
   ];
 

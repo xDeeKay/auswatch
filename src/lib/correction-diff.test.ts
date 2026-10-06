@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AuState, CameraStatus, CameraType, CaptureType, OperatorCategory } from "@/generated/prisma/enums";
+import { AuState, CameraStatus, CameraType, CaptureType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
 import { buildCameraDiff, buildCorrectionDiffRows } from "./correction-diff";
 import type { CameraSnapshot, ProposedCameraFields } from "./correction-diff";
 import type { ValidatedCorrection } from "@/lib/validation/correction";
@@ -11,6 +11,7 @@ const camera: CameraSnapshot = {
   operatorCategory: OperatorCategory.state_police,
   operator: "WA Police",
   captures: CaptureType.plates,
+  deployment: Deployment.fixed,
   notes: "Mounted on a light pole.",
   state: AuState.wa,
   status: CameraStatus.active,
@@ -26,6 +27,7 @@ function proposal(overrides: Partial<ValidatedCorrection> = {}): ValidatedCorrec
     operatorCategory: camera.operatorCategory,
     operator: camera.operator,
     captures: camera.captures,
+    deployment: camera.deployment,
     notes: camera.notes,
     reportedRemoved: false,
     ...overrides,
@@ -68,6 +70,11 @@ describe("buildCameraDiff", () => {
     expect(diff).toEqual({ captures: CaptureType.both });
   });
 
+  it("detects a deployment change", () => {
+    const diff = buildCameraDiff(camera, proposal({ deployment: Deployment.mobile }));
+    expect(diff).toEqual({ deployment: Deployment.mobile });
+  });
+
   it("detects an operatorCategory change", () => {
     const diff = buildCameraDiff(camera, proposal({ operatorCategory: OperatorCategory.local_council }));
     expect(diff).toEqual({ operatorCategory: OperatorCategory.local_council });
@@ -82,6 +89,7 @@ function noProposal(overrides: Partial<ProposedCameraFields> = {}): ProposedCame
     proposedOperator: null,
     proposedOperatorCategory: null,
     proposedCaptures: null,
+    proposedDeployment: null,
     proposedNotes: null,
     reportedRemoved: false,
     ...overrides,
@@ -91,6 +99,15 @@ function noProposal(overrides: Partial<ProposedCameraFields> = {}): ProposedCame
 describe("buildCorrectionDiffRows", () => {
   it("returns no rows when nothing was proposed", () => {
     expect(buildCorrectionDiffRows(camera, noProposal())).toEqual([]);
+  });
+
+  it("returns a deployment row when the proposed deployment differs", () => {
+    const rows = buildCorrectionDiffRows(camera, noProposal({ proposedDeployment: Deployment.mobile }));
+    expect(rows).toEqual([{ field: "deployment", label: "Deployment", before: "Fixed", after: "Mobile" }]);
+  });
+
+  it("returns no deployment row when the proposed deployment matches", () => {
+    expect(buildCorrectionDiffRows(camera, noProposal({ proposedDeployment: Deployment.fixed }))).toEqual([]);
   });
 
   it("returns a location row when lat/lng differ from the live camera", () => {
@@ -130,11 +147,11 @@ describe("buildCorrectionDiffRows", () => {
 
   it("returns a status row when the correction reports the camera removed", () => {
     const rows = buildCorrectionDiffRows(camera, noProposal({ reportedRemoved: true }));
-    expect(rows).toEqual([{ field: "status", label: "Status", before: "Active", after: "Removed" }]);
+    expect(rows).toEqual([{ field: "status", label: "Status", before: "Active", after: "Inactive" }]);
   });
 
   it("does not return a status row when the camera is already removed", () => {
-    const alreadyRemovedCamera: CameraSnapshot = { ...camera, status: CameraStatus.removed };
+    const alreadyRemovedCamera: CameraSnapshot = { ...camera, status: CameraStatus.inactive };
     const rows = buildCorrectionDiffRows(alreadyRemovedCamera, noProposal({ reportedRemoved: true }));
     expect(rows).toEqual([]);
   });

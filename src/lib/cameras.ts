@@ -4,6 +4,7 @@ import {
   CameraStatus,
   CameraType,
   CaptureType,
+  Deployment,
   ExternalImportSource,
   HistoryEventType,
   ModerationState,
@@ -25,6 +26,7 @@ export type PublicCamera = {
   operator: string;
   operatorCategory: OperatorCategory;
   captures: CaptureType;
+  deployment: Deployment;
   status: CameraStatus;
   notes: string;
   createdAt: Date;
@@ -42,6 +44,7 @@ export type CorrectableCamera = {
   operator: string;
   operatorCategory: OperatorCategory;
   captures: CaptureType;
+  deployment: Deployment;
   notes: string;
 };
 
@@ -56,6 +59,7 @@ export async function getVerifiedCameraById(id: string): Promise<CorrectableCame
       operator: true,
       operatorCategory: true,
       captures: true,
+      deployment: true,
       notes: true,
     },
   });
@@ -72,6 +76,7 @@ export async function getCameras(): Promise<PublicCamera[]> {
       operator: true,
       operatorCategory: true,
       captures: true,
+      deployment: true,
       status: true,
       notes: true,
       createdAt: true,
@@ -97,6 +102,7 @@ export async function getPublicCameraById(id: string): Promise<PublicCameraDetai
       operator: true,
       operatorCategory: true,
       captures: true,
+      deployment: true,
       status: true,
       notes: true,
       createdAt: true,

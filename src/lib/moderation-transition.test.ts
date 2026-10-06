@@ -13,34 +13,34 @@ const input = {
   actorId: "user-1",
   reasonCode: ModerationReasonCode.verified_accurate,
   note: "Looks accurate, plate reader confirmed by nearby streetview imagery.",
-  statusBefore: CameraStatus.unconfirmed,
+  statusBefore: CameraStatus.active,
   moderationActionId: "action-1",
 };
 
 const now = new Date("2026-08-30T09:00:00.000Z");
 
-describe("buildVerifyTransition for an already-removed camera", () => {
-  const plan = buildVerifyTransition({ ...input, statusBefore: CameraStatus.removed }, now);
+describe("buildVerifyTransition for an already-inactive camera", () => {
+  const plan = buildVerifyTransition({ ...input, statusBefore: CameraStatus.inactive }, now);
 
-  it("verifies it but keeps the removed status", () => {
+  it("verifies it but keeps the inactive status", () => {
     expect(plan.cameraUpdate).toEqual({
       moderationState: ModerationState.verified,
-      status: CameraStatus.removed,
+      status: CameraStatus.inactive,
     });
   });
 
-  it("adds no history event, so the original removal date is untouched", () => {
+  it("adds no history event, so the original inactive date is untouched", () => {
     expect(plan.historyEvent).toBeUndefined();
   });
 
   it("records the status as unchanged in the audit entry", () => {
     expect(plan.auditLogEntry.before).toEqual({
       moderationState: ModerationState.pending,
-      status: CameraStatus.removed,
+      status: CameraStatus.inactive,
     });
     expect(plan.auditLogEntry.after).toEqual({
       moderationState: ModerationState.verified,
-      status: CameraStatus.removed,
+      status: CameraStatus.inactive,
     });
   });
 });
@@ -55,8 +55,8 @@ describe("buildVerifyTransition", () => {
     });
   });
 
-  it("never produces a removed status", () => {
-    expect(plan.cameraUpdate.status).not.toBe(CameraStatus.removed);
+  it("never produces an inactive status", () => {
+    expect(plan.cameraUpdate.status).not.toBe(CameraStatus.inactive);
     expect(plan.cameraUpdate.moderationState).not.toBe(ModerationState.removed);
   });
 
@@ -86,7 +86,7 @@ describe("buildVerifyTransition", () => {
       entityId: "cam-1",
       action: "camera_verify",
       actorId: "user-1",
-      before: { moderationState: ModerationState.pending, status: CameraStatus.unconfirmed },
+      before: { moderationState: ModerationState.pending, status: CameraStatus.active },
       after: { moderationState: ModerationState.verified, status: CameraStatus.active },
       summary: "Verified this submission.",
       moderationActionId: "action-1",
@@ -100,7 +100,7 @@ describe("buildRemoveTransition", () => {
   it("sets moderationState to removed and status to removed", () => {
     expect(plan.cameraUpdate).toEqual({
       moderationState: ModerationState.removed,
-      status: CameraStatus.removed,
+      status: CameraStatus.inactive,
     });
   });
 
@@ -113,7 +113,7 @@ describe("buildRemoveTransition", () => {
     expect(plan.historyEvent).toEqual({
       cameraId: "cam-1",
       date: now,
-      eventType: HistoryEventType.removed,
+      eventType: HistoryEventType.inactive,
       note: input.note,
     });
   });
@@ -135,8 +135,8 @@ describe("buildRemoveTransition", () => {
       entityId: "cam-1",
       action: "camera_remove",
       actorId: "user-1",
-      before: { moderationState: ModerationState.pending, status: CameraStatus.unconfirmed },
-      after: { moderationState: ModerationState.removed, status: CameraStatus.removed },
+      before: { moderationState: ModerationState.pending, status: CameraStatus.active },
+      after: { moderationState: ModerationState.removed, status: CameraStatus.inactive },
       summary: "Removed this submission.",
       moderationActionId: "action-1",
     });

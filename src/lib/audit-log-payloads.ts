@@ -5,6 +5,7 @@ import type {
   CameraStatus,
   CameraType,
   CaptureType,
+  Deployment,
   ModerationState,
   ModeratorRole,
   OperatorCategory,
@@ -28,6 +29,7 @@ export type CameraFieldsPayload = Partial<{
   operator: string;
   operatorCategory: OperatorCategory;
   captures: CaptureType;
+  deployment: Deployment;
   notes: string;
 }>;
 
@@ -39,6 +41,7 @@ const CAMERA_FIELDS_PAYLOAD_KEYS = [
   "operator",
   "operatorCategory",
   "captures",
+  "deployment",
   "notes",
 ] as const satisfies readonly (keyof CameraFieldsPayload)[];
 

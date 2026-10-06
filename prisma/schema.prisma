@@ -25,8 +25,7 @@ enum CaptureType {
 
 enum CameraStatus {
   active
-  removed
-  unconfirmed
+  inactive
 }
 
 enum ModerationState {
@@ -36,10 +35,9 @@ enum ModerationState {
 }
 
 enum HistoryEventType {
-  sighted
+  added
   active
-  removed
-  unconfirmed
+  inactive
   relocated
   corrected
 }
@@ -108,6 +106,12 @@ enum OperatorCategory {
   unknown
 }
 
+enum Deployment {
+  fixed
+  mobile
+  unknown
+}
+
 enum ExternalImportSource {
   act_open_data
   vic_open_data
@@ -152,8 +156,9 @@ model Camera {
   type                 CameraType
   operator             String               @default("")
   operatorCategory     OperatorCategory     @default(unknown)
+  deployment           Deployment           @default(unknown)
   captures             CaptureType
-  status               CameraStatus         @default(unconfirmed)
+  status               CameraStatus         @default(active)
   notes                String               @default("")
   reporterId           String // anonymized token only, never PII (IP, email, account)
   moderationState      ModerationState      @default(pending)
@@ -252,6 +257,7 @@ model CorrectionReport {
   proposedType             CameraType?
   proposedOperator         String?
   proposedOperatorCategory OperatorCategory?
+  proposedDeployment       Deployment?
   proposedCaptures         CaptureType?
   proposedNotes            String?
   // A separate claim, not a mirrored full-state field like the proposed*

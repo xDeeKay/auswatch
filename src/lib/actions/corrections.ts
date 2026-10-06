@@ -75,6 +75,7 @@ export async function approveCorrection(
           proposedOperator: correction.proposedOperator,
           proposedOperatorCategory: correction.proposedOperatorCategory,
           proposedCaptures: correction.proposedCaptures,
+          proposedDeployment: correction.proposedDeployment,
           proposedNotes: correction.proposedNotes,
           reportedRemoved: correction.reportedRemoved,
           proposedSensitiveSiteMatches:

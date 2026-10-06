@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE_OPTIONS = { defaultPageSize: 20, maxPageSize: 100 };
-const STATUS_FILTER_OPTIONS: CameraStatus[] = [CameraStatus.active, CameraStatus.removed];
+const STATUS_FILTER_OPTIONS: CameraStatus[] = [CameraStatus.active, CameraStatus.inactive];
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",

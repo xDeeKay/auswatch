@@ -54,7 +54,7 @@ export default async function AdminImportsPage({ searchParams }: { searchParams:
       <p className="max-w-3xl text-sm text-foreground/70">
         Records imported from official datasets arrive pending, like any other submission. Verifying here
         re-runs the sensitive-site check against current data and only verifies records with no matches and no check
-        errors, up to {BULK_VERIFY_BATCH_SIZE} per click. Records the source reports as decommissioned stay removed.
+        errors, up to {BULK_VERIFY_BATCH_SIZE} per click. Records the source reports as decommissioned stay inactive.
         Anything flagged or unchecked stays in the queue and is reviewed individually like any other submission. Each
         verify is logged and can be reverted from the audit log.
       </p>
