@@ -24,6 +24,7 @@ export type CameraFieldDiff = {
   captures?: CaptureType;
   deployment?: Deployment;
   notes?: string;
+  status?: CameraStatus;
 };
 
 export function buildCameraDiff(
@@ -54,6 +55,9 @@ export function buildCameraDiff(
   if (proposed.notes !== current.notes) {
     diff.notes = proposed.notes;
   }
+  if (proposed.status !== current.status) {
+    diff.status = proposed.status;
+  }
 
   return diff;
 }
@@ -67,7 +71,7 @@ export type ProposedCameraFields = {
   proposedCaptures: CaptureType | null;
   proposedDeployment: Deployment | null;
   proposedNotes: string | null;
-  reportedRemoved: boolean;
+  proposedStatus: CameraStatus | null;
 };
 
 export type CorrectionDiffRow = { field: string; label: string; before: string; after: string };
@@ -129,12 +133,12 @@ export function buildCorrectionDiffRows(
       after: correction.proposedNotes || "(none)",
     });
   }
-  if (correction.reportedRemoved && camera.status !== "inactive") {
+  if (correction.proposedStatus !== null && correction.proposedStatus !== camera.status) {
     rows.push({
       field: "status",
       label: "Status",
       before: STATUS_LABEL[camera.status],
-      after: STATUS_LABEL.inactive,
+      after: STATUS_LABEL[correction.proposedStatus],
     });
   }
   if (correction.proposedLat !== null && correction.proposedLng !== null) {

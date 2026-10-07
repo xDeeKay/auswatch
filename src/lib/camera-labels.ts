@@ -11,6 +11,8 @@ export const STATUS_LABEL: Record<CameraStatus, string> = {
   [CameraStatus.inactive]: "Inactive",
 };
 
+export const STATUS_ORDER: CameraStatus[] = [CameraStatus.active, CameraStatus.inactive];
+
 export const DEPLOYMENT_LABEL: Record<Deployment, string> = {
   [Deployment.fixed]: "Fixed",
   [Deployment.mobile]: "Mobile",

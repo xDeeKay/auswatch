@@ -3,7 +3,7 @@
 import { useState } from "react";
 import LocationPicker from "@/components/LocationPicker";
 import type { LatLng } from "@/components/LocationPickerView";
-import { CameraType, CaptureType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
+import { CameraStatus, CameraType, CaptureType, Deployment, OperatorCategory } from "@/generated/prisma/enums";
 import {
   TYPE_LABEL,
   TYPE_ORDER,
@@ -11,6 +11,8 @@ import {
   CAPTURE_ORDER,
   DEPLOYMENT_LABEL,
   DEPLOYMENT_ORDER,
+  STATUS_LABEL,
+  STATUS_ORDER,
   OPERATOR_CATEGORY_LABEL,
   OPERATOR_NAME_PROMPT,
 } from "@/lib/camera-labels";
@@ -33,7 +35,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
   const [deployment, setDeployment] = useState<Deployment>(camera.deployment);
   const [notes, setNotes] = useState(camera.notes);
   const [location, setLocation] = useState<LatLng | null>({ lat: camera.lat, lng: camera.lng });
-  const [reportedRemoved, setReportedRemoved] = useState(false);
+  const [status, setStatus] = useState<CameraStatus>(camera.status);
   const [reporterNote, setReporterNote] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
   const [state, setState] = useState<SubmitState>("idle");
@@ -64,7 +66,7 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
           captures,
           deployment,
           notes,
-          reportedRemoved,
+          status,
           reporterNote,
         })
       );
@@ -169,6 +171,29 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <label className={fieldLabel} htmlFor="status">
+          STATUS
+        </label>
+        <select
+          id="status"
+          className={singleLineClass}
+          value={status}
+          onChange={(e) => setStatus(e.target.value as CameraStatus)}
+          required
+        >
+          {STATUS_ORDER.map((st) => (
+            <option key={st} value={st}>
+              {STATUS_LABEL[st]}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-foreground/50">
+          Change this if the camera has stopped operating, or is operating again.
+        </p>
+        {fieldErrors.status && <p className="text-xs text-error">{fieldErrors.status[0]}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label className={fieldLabel} htmlFor="operatorCategory">
           OPERATOR CATEGORY
         </label>
@@ -221,19 +246,6 @@ export default function CorrectionForm({ camera }: { camera: CorrectableCamera }
         />
         {fieldErrors.notes && <p className="text-xs text-error">{fieldErrors.notes[0]}</p>}
       </div>
-
-      <label className="flex items-start gap-3 rounded border border-foreground/20 px-3 py-2.5 text-sm text-foreground/85">
-        <input
-          type="checkbox"
-          checked={reportedRemoved}
-          onChange={(e) => setReportedRemoved(e.target.checked)}
-          className="mt-0.5 accent-amber"
-        />
-        <span>
-          This camera is no longer there. It&rsquo;s been taken down, relocated, or otherwise
-          removed since it was last confirmed.
-        </span>
-      </label>
 
       <div className="flex flex-col gap-1.5">
         <label className={fieldLabel}>LOCATION</label>

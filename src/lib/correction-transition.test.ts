@@ -41,7 +41,7 @@ function pendingCorrection(overrides: Partial<PendingCorrection> = {}): PendingC
     proposedCaptures: null,
     proposedDeployment: null,
     proposedNotes: null,
-    reportedRemoved: false,
+    proposedStatus: null,
     proposedSensitiveSiteMatches: null,
     proposedSensitiveSiteCheckErrors: null,
     ...overrides,
@@ -302,22 +302,45 @@ describe("buildCorrectionApproveTransition", () => {
     });
   });
 
-  it("sets status to removed when the correction reports the camera removed", () => {
-    const plan = buildCorrectionApproveTransition(pendingCorrection({ reportedRemoved: true }), camera, input, now);
+  it("sets status to inactive when the correction proposes the camera inactive", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedStatus: CameraStatus.inactive }),
+      camera,
+      input,
+      now
+    );
     expect(plan.cameraUpdate).toEqual({ status: CameraStatus.inactive });
   });
 
-  it("uses the removed HistoryEventType and notes the status change when reporting a removal", () => {
-    const plan = buildCorrectionApproveTransition(pendingCorrection({ reportedRemoved: true }), camera, input, now);
+  it("uses the inactive HistoryEventType and notes the change when marking a camera inactive", () => {
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedStatus: CameraStatus.inactive }),
+      camera,
+      input,
+      now
+    );
     expect(plan.historyEvent?.eventType).toBe(HistoryEventType.inactive);
     expect(plan.historyEvent?.note).toBe('Status corrected from "Active" to "Inactive"');
   });
 
-  it("does not touch status when the camera is already removed", () => {
-    const alreadyRemovedCamera = { ...camera, status: CameraStatus.inactive };
+  it("reactivates an inactive camera with the active HistoryEventType", () => {
+    const inactiveCamera = { ...camera, status: CameraStatus.inactive };
     const plan = buildCorrectionApproveTransition(
-      pendingCorrection({ reportedRemoved: true }),
-      alreadyRemovedCamera,
+      pendingCorrection({ proposedStatus: CameraStatus.active }),
+      inactiveCamera,
+      input,
+      now
+    );
+    expect(plan.cameraUpdate).toEqual({ status: CameraStatus.active });
+    expect(plan.historyEvent?.eventType).toBe(HistoryEventType.active);
+    expect(plan.historyEvent?.note).toBe('Status corrected from "Inactive" to "Active"');
+  });
+
+  it("does not touch status when the camera already has the proposed status", () => {
+    const inactiveCamera = { ...camera, status: CameraStatus.inactive };
+    const plan = buildCorrectionApproveTransition(
+      pendingCorrection({ proposedStatus: CameraStatus.inactive }),
+      inactiveCamera,
       input,
       now
     );
@@ -325,9 +348,9 @@ describe("buildCorrectionApproveTransition", () => {
     expect(plan.historyEvent).toBeUndefined();
   });
 
-  it("combines a removal with other proposed field changes in one history event", () => {
+  it("combines a status change with other proposed field changes in one history event", () => {
     const plan = buildCorrectionApproveTransition(
-      pendingCorrection({ reportedRemoved: true, proposedOperator: "NSW Police" }),
+      pendingCorrection({ proposedStatus: CameraStatus.inactive, proposedOperator: "NSW Police" }),
       camera,
       input,
       now

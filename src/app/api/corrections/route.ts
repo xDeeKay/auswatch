@@ -83,8 +83,7 @@ export async function POST(request: Request) {
     }
 
     const diff = buildCameraDiff(camera, parsed.data);
-    const reportsRemoval = parsed.data.reportedRemoved && camera.status !== CameraStatus.inactive;
-    if (Object.keys(diff).length === 0 && !reportsRemoval) {
+    if (Object.keys(diff).length === 0) {
       return acceptedResponse(currentToken);
     }
 
@@ -130,7 +129,7 @@ export async function POST(request: Request) {
             }
           : undefined,
         proposedNotes: diff.notes,
-        reportedRemoved: reportsRemoval,
+        proposedStatus: diff.status,
         proposedSensitiveSiteMatches: proposedSensitiveSiteMatches ?? undefined,
         proposedSensitiveSiteCheckErrors: proposedSensitiveSiteCheckErrors ?? undefined,
       },

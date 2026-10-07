@@ -260,10 +260,7 @@ model CorrectionReport {
   proposedDeployment       Deployment?
   proposedCaptures         CaptureType?
   proposedNotes            String?
-  // A separate claim, not a mirrored full-state field like the proposed*
-  // columns above: "this camera is no longer there," independent of whether
-  // any other field also changed.
-  reportedRemoved          Boolean            @default(false)
+  proposedStatus           CameraStatus?
 
   reporterNote String    @default("")
   createdAt    DateTime  @default(now())

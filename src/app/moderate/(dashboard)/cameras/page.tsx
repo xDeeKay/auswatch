@@ -12,7 +12,15 @@ import {
   ModeratorRole,
   OperatorCategory,
 } from "@/generated/prisma/enums";
-import { TYPE_LABEL, TYPE_ORDER, STATUS_LABEL, OPERATOR_CATEGORY_LABEL, CAPTURE_LABEL, CAPTURE_ORDER } from "@/lib/camera-labels";
+import {
+  TYPE_LABEL,
+  TYPE_ORDER,
+  STATUS_LABEL,
+  STATUS_ORDER,
+  OPERATOR_CATEGORY_LABEL,
+  CAPTURE_LABEL,
+  CAPTURE_ORDER,
+} from "@/lib/camera-labels";
 import { STATE_LABEL } from "@/lib/au-state-labels";
 import { requireModerator } from "@/lib/moderator-access";
 import { parsePageParams } from "@/lib/pagination";
@@ -26,7 +34,6 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE_OPTIONS = { defaultPageSize: 20, maxPageSize: 100 };
-const STATUS_FILTER_OPTIONS: CameraStatus[] = [CameraStatus.active, CameraStatus.inactive];
 
 const dateFormatter = new Intl.DateTimeFormat("en-AU", {
   year: "numeric",
@@ -149,7 +156,7 @@ export default async function ModerateCamerasPage({
   const typeFilter =
     params.type && (Object.values(CameraType) as string[]).includes(params.type) ? (params.type as CameraType) : undefined;
   const statusFilter =
-    params.status && STATUS_FILTER_OPTIONS.includes(params.status as CameraStatus)
+    params.status && STATUS_ORDER.includes(params.status as CameraStatus)
       ? (params.status as CameraStatus)
       : undefined;
   const operatorCategoryFilter =
@@ -205,7 +212,7 @@ export default async function ModerateCamerasPage({
           <Label>CAMERA STATUS</Label>
           <Select name="status" defaultValue={params.status ?? ""} className="w-auto">
             <option value="">All statuses</option>
-            {STATUS_FILTER_OPTIONS.map((status) => (
+            {STATUS_ORDER.map((status) => (
               <option key={status} value={status}>
                 {STATUS_LABEL[status]}
               </option>

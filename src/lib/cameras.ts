@@ -45,6 +45,7 @@ export type CorrectableCamera = {
   operatorCategory: OperatorCategory;
   captures: CaptureType;
   deployment: Deployment;
+  status: CameraStatus;
   notes: string;
 };
 
@@ -60,6 +61,7 @@ export async function getVerifiedCameraById(id: string): Promise<CorrectableCame
       operatorCategory: true,
       captures: true,
       deployment: true,
+      status: true,
       notes: true,
     },
   });

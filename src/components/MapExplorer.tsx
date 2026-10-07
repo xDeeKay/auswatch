@@ -12,6 +12,7 @@ import {
   STATE_LABEL,
   STATUS_COLOR,
   STATUS_LABEL,
+  STATUS_ORDER,
   DEPLOYMENT_LABEL,
   DEPLOYMENT_ORDER,
   TYPE_LABEL,
@@ -22,7 +23,6 @@ import { CloseButton } from "@/components/ui/CloseButton";
 import { Label } from "@/components/ui/Field";
 import { useResolvedTheme } from "@/components/useResolvedTheme";
 
-const STATUS_ORDER: CameraStatus[] = [CameraStatus.active, CameraStatus.inactive];
 
 const OPERATOR_CATEGORY_ORDER: OperatorCategory[] = [
   OperatorCategory.state_police,

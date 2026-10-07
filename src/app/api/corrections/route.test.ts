@@ -57,6 +57,7 @@ function validBody(overrides: Record<string, unknown> = {}) {
     operator: camera.operator,
     captures: camera.captures,
     deployment: camera.deployment,
+    status: camera.status,
     notes: camera.notes,
     reporterNote: "",
     ...overrides,
@@ -190,18 +191,34 @@ describe("POST /api/corrections anti-enumeration", () => {
     expect(correctionReportCreateMock).toHaveBeenCalledTimes(1);
   });
 
-  it("creates a correction reporting removal even when no other field changed", async () => {
-    const res = await POST(postRequest(validBody({ reportedRemoved: true })));
+  it("creates a correction proposing a status change even when no other field changed", async () => {
+    const res = await POST(postRequest(validBody({ status: CameraStatus.inactive })));
 
     expect(res.status).toBe(200);
     expect(correctionReportCreateMock).toHaveBeenCalledTimes(1);
-    expect(correctionReportCreateMock.mock.calls[0][0].data).toMatchObject({ reportedRemoved: true });
+    expect(correctionReportCreateMock.mock.calls[0][0].data).toMatchObject({ proposedStatus: CameraStatus.inactive });
   });
 
-  it("ignores a removal report for a camera that's already removed", async () => {
+  it("creates a correction proposing an inactive camera active again", async () => {
     cameraFindUniqueMock.mockResolvedValue({ ...camera, status: CameraStatus.inactive });
 
-    const res = await POST(postRequest(validBody({ reportedRemoved: true })));
+    const res = await POST(postRequest(validBody({ status: CameraStatus.active })));
+
+    expect(res.status).toBe(200);
+    expect(correctionReportCreateMock.mock.calls[0][0].data).toMatchObject({ proposedStatus: CameraStatus.active });
+  });
+
+  it("rejects an unknown status value", async () => {
+    const res = await POST(postRequest(validBody({ status: "removed" })));
+
+    expect(res.status).toBe(400);
+    expect(correctionReportCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("ignores a status proposal that matches the camera's current status", async () => {
+    cameraFindUniqueMock.mockResolvedValue({ ...camera, status: CameraStatus.inactive });
+
+    const res = await POST(postRequest(validBody({ status: CameraStatus.inactive })));
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({

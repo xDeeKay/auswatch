@@ -29,7 +29,7 @@ function proposal(overrides: Partial<ValidatedCorrection> = {}): ValidatedCorrec
     captures: camera.captures,
     deployment: camera.deployment,
     notes: camera.notes,
-    reportedRemoved: false,
+    status: camera.status,
     ...overrides,
   };
 }
@@ -70,6 +70,14 @@ describe("buildCameraDiff", () => {
     expect(diff).toEqual({ captures: CaptureType.both });
   });
 
+  it("detects a status change in either direction", () => {
+    expect(buildCameraDiff(camera, proposal({ status: CameraStatus.inactive }))).toEqual({ status: CameraStatus.inactive });
+    const inactiveCamera: CameraSnapshot = { ...camera, status: CameraStatus.inactive };
+    expect(buildCameraDiff(inactiveCamera, proposal({ status: CameraStatus.active }))).toEqual({
+      status: CameraStatus.active,
+    });
+  });
+
   it("detects a deployment change", () => {
     const diff = buildCameraDiff(camera, proposal({ deployment: Deployment.mobile }));
     expect(diff).toEqual({ deployment: Deployment.mobile });
@@ -91,7 +99,7 @@ function noProposal(overrides: Partial<ProposedCameraFields> = {}): ProposedCame
     proposedCaptures: null,
     proposedDeployment: null,
     proposedNotes: null,
-    reportedRemoved: false,
+    proposedStatus: null,
     ...overrides,
   };
 }
@@ -145,14 +153,19 @@ describe("buildCorrectionDiffRows", () => {
     ]);
   });
 
-  it("returns a status row when the correction reports the camera removed", () => {
-    const rows = buildCorrectionDiffRows(camera, noProposal({ reportedRemoved: true }));
+  it("returns a status row when the correction proposes the camera inactive", () => {
+    const rows = buildCorrectionDiffRows(camera, noProposal({ proposedStatus: CameraStatus.inactive }));
     expect(rows).toEqual([{ field: "status", label: "Status", before: "Active", after: "Inactive" }]);
   });
 
-  it("does not return a status row when the camera is already removed", () => {
-    const alreadyRemovedCamera: CameraSnapshot = { ...camera, status: CameraStatus.inactive };
-    const rows = buildCorrectionDiffRows(alreadyRemovedCamera, noProposal({ reportedRemoved: true }));
+  it("returns a status row when the correction proposes an inactive camera active again", () => {
+    const inactiveCamera: CameraSnapshot = { ...camera, status: CameraStatus.inactive };
+    const rows = buildCorrectionDiffRows(inactiveCamera, noProposal({ proposedStatus: CameraStatus.active }));
+    expect(rows).toEqual([{ field: "status", label: "Status", before: "Inactive", after: "Active" }]);
+  });
+
+  it("does not return a status row when the proposed status matches the live one", () => {
+    const rows = buildCorrectionDiffRows(camera, noProposal({ proposedStatus: CameraStatus.active }));
     expect(rows).toEqual([]);
   });
 
