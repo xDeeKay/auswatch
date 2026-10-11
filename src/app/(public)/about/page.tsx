@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
+import { getDataSourcesInUse } from "@/lib/data-sources";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "AusWatch - About",
@@ -11,7 +14,15 @@ export const metadata: Metadata = {
 const linkClass =
   "text-foreground underline decoration-amber/50 underline-offset-2 transition hover:text-amber hover:decoration-amber";
 
-export default function AboutPage() {
+const dateFormatter = new Intl.DateTimeFormat("en-AU", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+export default async function AboutPage() {
+  const dataSources = await getDataSourcesInUse();
+
   return (
     <>
       <div className="px-6 py-6 watch:px-watch-inset watch:pb-watch-inset">
@@ -225,6 +236,52 @@ export default function AboutPage() {
             <p className="text-sm leading-relaxed text-foreground/70">
               That&rsquo;s the record AusWatch keeps.
             </p>
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <h2 className="font-heading text-base text-foreground">Data sources</h2>
+            <p className="text-sm leading-relaxed text-foreground/70">
+              Most records come from people reporting cameras they&rsquo;ve seen. Some are imported
+              from government open data. An imported record goes through the same moderation and
+              sensitive-site checks as any report before it appears on the map, and keeps a credit
+              to the dataset it came from.
+            </p>
+            {dataSources.length === 0 ? (
+              <p className="text-sm leading-relaxed text-foreground/70">
+                No government datasets are in use yet.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {dataSources.map((source) => (
+                  <li key={source.id} className="rounded border border-foreground/10 p-4">
+                    <a className={`${linkClass} text-sm`} href={source.url} target="_blank" rel="noopener noreferrer">
+                      {source.name}
+                    </a>
+                    <p className="mt-1 text-sm text-foreground/70">
+                      {source.attribution.credit}, licensed{" "}
+                      {source.attribution.licenceUrl ? (
+                        <a
+                          className={linkClass}
+                          href={source.attribution.licenceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {source.attribution.licence}
+                        </a>
+                      ) : (
+                        source.attribution.licence
+                      )}
+                      .
+                    </p>
+                    <p className="mt-2 font-label text-xs text-foreground/50">
+                      first imported {dateFormatter.format(source.firstImportedAt)} &middot;{" "}
+                      {source.publicRecords.toLocaleString("en-AU")} public{" "}
+                      {source.publicRecords === 1 ? "record" : "records"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="flex flex-col gap-4">
