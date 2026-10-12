@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { buildAustraliaOutlinePaths, project, LANDING_MAP_WIDTH, LANDING_MAP_HEIGHT } from "@/lib/landing-map";
+import {
+  buildAustraliaOutlinePaths,
+  groupLandingMarkers,
+  LANDING_MAP_WIDTH,
+  LANDING_MAP_HEIGHT,
+} from "@/lib/landing-map";
 import type { PublicCamera } from "@/lib/cameras";
 
 // The same land fill the real /map uses (see LAND_COLOR in map-constants.ts
@@ -17,6 +22,7 @@ const OUTLINE_STYLE = {
 
 export function LandingMap({ cameras }: { cameras: PublicCamera[] }) {
   const outlines = buildAustraliaOutlinePaths();
+  const markers = groupLandingMarkers(cameras);
 
   return (
     <svg
@@ -48,15 +54,12 @@ export function LandingMap({ cameras }: { cameras: PublicCamera[] }) {
             <path key={i} d={d} style={OUTLINE_STYLE} />
           ))}
 
-          {cameras.map((camera) => {
-            const [x, y] = project(camera.lng, camera.lat);
-            return (
-              <g key={camera.id}>
-                <circle cx={x} cy={y} r={10} fill="url(#landing-map-glow)" />
-                <circle cx={x} cy={y} r={3.5} fill="var(--color-accent)" />
-              </g>
-            );
-          })}
+          {markers.map(({ x, y }) => (
+            <g key={`${x},${y}`}>
+              <circle cx={x} cy={y} r={10} fill="url(#landing-map-glow)" />
+              <circle cx={x} cy={y} r={3.5} fill="var(--color-accent)" />
+            </g>
+          ))}
         </g>
       </Link>
     </svg>

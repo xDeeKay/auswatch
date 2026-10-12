@@ -24,6 +24,32 @@ export function project(lng: number, lat: number): [number, number] {
   return [(lng - WEST) * LAT_COS * SCALE, (NORTH - lat) * SCALE];
 }
 
+// Each marker carries a translucent glow, so hundreds of cameras on the same
+// few pixels would stack into one solid disc far larger than a single marker.
+// Cameras that fall in the same cell share one marker instead, placed at their
+// average position. The cell is a little wider than a marker dot, so
+// neighbouring markers sit side by side rather than piling up.
+export const LANDING_MARKER_CELL = 8;
+
+export type LandingMarker = { x: number; y: number; count: number };
+
+export function groupLandingMarkers(points: ReadonlyArray<{ lat: number; lng: number }>): LandingMarker[] {
+  const cells = new Map<string, { sumX: number; sumY: number; count: number }>();
+  for (const { lat, lng } of points) {
+    const [x, y] = project(lng, lat);
+    const key = `${Math.floor(x / LANDING_MARKER_CELL)},${Math.floor(y / LANDING_MARKER_CELL)}`;
+    const cell = cells.get(key);
+    if (cell) {
+      cell.sumX += x;
+      cell.sumY += y;
+      cell.count++;
+    } else {
+      cells.set(key, { sumX: x, sumY: y, count: 1 });
+    }
+  }
+  return [...cells.values()].map(({ sumX, sumY, count }) => ({ x: sumX / count, y: sumY / count, count }));
+}
+
 function ringToPath(ring: Point[]): string {
   const projected = ring.map(([lng, lat]) => project(lng, lat));
   return projected.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ") + " Z";
